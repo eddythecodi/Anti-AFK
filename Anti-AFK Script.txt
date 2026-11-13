@@ -52,7 +52,7 @@ local Config = {
     AfkAlarmHours = 2,
     AntiModEnabled = false,
     WallpaperAsset = "",
-    TextLightness = 1.0, -- Text brightness multiplier (0.5 to 1.5)
+    TextLightness = 1.0,
     FirstTimeSeen = false,
     TotalRuns = 0
 }
@@ -76,7 +76,6 @@ local function LoadConfig()
             end
         end)
     end
-    -- Increment run counter on load
     Config.TotalRuns = (Config.TotalRuns or 0) + 1
     SaveConfig()
 end
@@ -400,13 +399,17 @@ RegisterText(TWLabel, false)
 -- 2. Open Button Bar (Right side of top-middle, side-by-side with TimeWidget)
 local OpenWidget = Instance.new("TextButton")
 OpenWidget.Name = "OpenWidget"
-OpenWidget.Size = UDim2.fromOffset(105, 42)
+OpenWidget.Size = UDim2.fromOffset(95, 42)
 OpenWidget.Position = UDim2.new(0.5, -2, 0, 15)
 OpenWidget.BackgroundColor3 = Theme.BgSecondary
 OpenWidget.AutoButtonColor = false
+OpenWidget.Text = "Open"
+OpenWidget.Font = Enum.Font.GothamBold
+OpenWidget.TextSize = 13
 OpenWidget.Visible = not Config.Open
 OpenWidget.ZIndex = 50
 OpenWidget.Parent = Gui
+RegisterText(OpenWidget, true)
 
 local OWCorner = Instance.new("UICorner")
 OWCorner.CornerRadius = UDim.new(1, 0)
@@ -416,16 +419,6 @@ local OWStroke = Instance.new("UIStroke")
 OWStroke.Color = Theme.Accent
 OWStroke.Thickness = 1.6
 OWStroke.Parent = OpenWidget
-
-local OWLabel = Instance.new("TextLabel")
-OWLabel.Size = UDim2.new(1, 0, 1, 0)
-OWLabel.BackgroundTransparency = 1
-OWLabel.Text = "📂 Open"
-OWLabel.Font = Enum.Font.GothamBold
-OWLabel.TextSize = 12
-OWLabel.ZIndex = 51
-OWLabel.Parent = OpenWidget
-RegisterText(OWLabel, true)
 
 local function MakeDraggable(obj, handle)
     local dragging, dragStart, startPos
@@ -762,7 +755,6 @@ StatsRow.BackgroundTransparency = 1
 StatsRow.ZIndex = 5
 StatsRow.Parent = PageDash
 
--- Session Timer Stat Box
 local StatBox1 = MakeCard(StatsRow, 75)
 StatBox1.Size = UDim2.new(1, 0, 1, 0)
 
@@ -791,7 +783,6 @@ TimerValue.Parent = StatBox1
 RegisterText(TimerValue, true)
 table.insert(ThemedAccents, TimerValue)
 
--- Total Runs Stat Card
 local RunsCard = MakeCard(PageDash, 65)
 local RunsTitle = Instance.new("TextLabel")
 RunsTitle.Size = UDim2.new(1, -20, 0, 16)
@@ -1003,7 +994,6 @@ for i, th in ipairs(Themes) do
     end)
 end
 
--- Text Lightness Slider Card
 local TextLightCard = MakeCard(PageVisuals, 75)
 local TLTitle = Instance.new("TextLabel")
 TLTitle.Size = UDim2.new(1, -24, 0, 20)
@@ -1062,7 +1052,6 @@ TLBtn.MouseButton1Down:Connect(function()
     end)
 end)
 
--- Wallpaper Input Card
 local WallpaperCard = MakeCard(PageVisuals, 85)
 local WPTit = Instance.new("TextLabel")
 WPTit.Size = UDim2.new(1, -24, 0, 22)
