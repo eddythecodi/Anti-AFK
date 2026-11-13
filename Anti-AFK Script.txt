@@ -1,0 +1,1866 @@
+--====================================================================
+--   🐾 ANTI-AFK | PAW-LUXE ULTIMATE SUITE v9.1 (GOD-TIER EDITION) 🐾
+--====================================================================
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local VirtualUser = game:GetService("VirtualUser")
+local RunService = game:GetService("RunService")
+local TeleportService = game:GetService("TeleportService")
+local Stats = game:GetService("Stats")
+local SoundService = game:GetService("SoundService")
+local HttpService = game:GetService("HttpService")
+local Lighting = game:GetService("Lighting")
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+
+-- Auto-Execute on Rejoin (Executor Support)
+pcall(function()
+    if queue_on_teleport then
+        queue_on_teleport(syn and syn.queue_on_teleport or queue_on_teleport, [[
+            -- Paw-Luxe Auto-Reinject
+            task.wait(3)
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/your-repo/paw-luxe/main/loader.lua"))()
+        ]])
+    end
+end)
+
+-- Cleanup existing instance
+local Old = PlayerGui:FindFirstChild("PawLuxe_AntiAFK")
+if Old then Old:Destroy() end
+
+--====================================================================
+--   STATE & CONFIGURATION (WITH FILE SAVING)
+--====================================================================
+local Config = {
+    Enabled = true,
+    Open = true,
+    Method = "Virtual Click",
+    Interval = 60,
+    UIScale = 1.0,
+    Keybind = Enum.KeyCode.RightShift,
+    SoundEnabled = true,
+    SoundVolume = 0.35,
+    SoundProfile = "Default",
+    AutoRejoin = false,
+    CustomStatusText = "PROTECTION ACTIVE",
+    WebhookUrl = "",
+    WebhookEnabled = false,
+    PotatoMode = false,
+    AfkAlarmHours = 2,
+    AntiModEnabled = false,
+    EarningsRate = 100, -- Earnings per minute
+    WallpaperAsset = "",
+    TextLightness = 1.0 -- Text brightness multiplier (0.5 to 1.5)
+}
+
+local FileName = "PawLuxe_Config_v9_" .. Player.UserId .. ".json"
+
+local function SaveConfig()
+    if writefile then
+        pcall(function()
+            writefile(FileName, HttpService:JSONEncode(Config))
+        end)
+    end
+end
+
+local function LoadConfig()
+    if readfile and pcall(function() readfile(FileName) end) then
+        pcall(function()
+            local decoded = HttpService:JSONDecode(readfile(FileName))
+            for k, v in pairs(decoded) do
+                Config[k] = v
+            end
+        end)
+    end
+end
+LoadConfig()
+
+local Session = {
+    StartTime = tick(),
+    PausedAccumulated = 0,
+    LastPauseTime = nil,
+    PulsesBlocked = 0,
+    CurrentTab = "Dashboard",
+    NotificationLog = {},
+    PetHappiness = 50,
+    PetLevel = 1,
+    PetExp = 0,
+    PeakPing = 0,
+    LowestFps = 60,
+    LastHourlyDigest = tick()
+}
+
+-- SOLID, HIGH-CONTRAST PALETTES
+local Themes = {
+    {
+        Name = "Lavender Dream 🐾",
+        BgPrimary = Color3.fromRGB(22, 16, 36),
+        BgSecondary = Color3.fromRGB(30, 22, 48),
+        Card = Color3.fromRGB(38, 28, 62),
+        ButtonSolid = Color3.fromRGB(50, 38, 80),
+        Accent = Color3.fromRGB(255, 140, 210),
+        Secondary = Color3.fromRGB(180, 130, 255),
+        TextMain = Color3.fromRGB(255, 255, 255),
+        TextMuted = Color3.fromRGB(200, 185, 220),
+        Grad1 = Color3.fromRGB(55, 30, 95),
+        Grad2 = Color3.fromRGB(16, 11, 26)
+    },
+    {
+        Name = "Sakura Fox 🦊",
+        BgPrimary = Color3.fromRGB(36, 16, 24),
+        BgSecondary = Color3.fromRGB(48, 22, 34),
+        Card = Color3.fromRGB(62, 28, 44),
+        ButtonSolid = Color3.fromRGB(78, 36, 56),
+        Accent = Color3.fromRGB(255, 115, 155),
+        Secondary = Color3.fromRGB(255, 175, 200),
+        TextMain = Color3.fromRGB(255, 255, 255),
+        TextMuted = Color3.fromRGB(225, 190, 205),
+        Grad1 = Color3.fromRGB(95, 32, 58),
+        Grad2 = Color3.fromRGB(24, 10, 16)
+    },
+    {
+        Name = "Cyber Wolf 🐺",
+        BgPrimary = Color3.fromRGB(12, 20, 32),
+        BgSecondary = Color3.fromRGB(18, 30, 46),
+        Card = Color3.fromRGB(25, 40, 62),
+        ButtonSolid = Color3.fromRGB(35, 55, 82),
+        Accent = Color3.fromRGB(90, 225, 255),
+        Secondary = Color3.fromRGB(130, 195, 255),
+        TextMain = Color3.fromRGB(255, 255, 255),
+        TextMuted = Color3.fromRGB(180, 210, 235),
+        Grad1 = Color3.fromRGB(24, 60, 95),
+        Grad2 = Color3.fromRGB(8, 14, 22)
+    },
+    {
+        Name = "Mocha Bear 🐻",
+        BgPrimary = Color3.fromRGB(30, 22, 18),
+        BgSecondary = Color3.fromRGB(42, 30, 25),
+        Card = Color3.fromRGB(55, 40, 34),
+        ButtonSolid = Color3.fromRGB(72, 52, 44),
+        Accent = Color3.fromRGB(255, 185, 125),
+        Secondary = Color3.fromRGB(210, 155, 105),
+        TextMain = Color3.fromRGB(255, 255, 255),
+        TextMuted = Color3.fromRGB(215, 195, 180),
+        Grad1 = Color3.fromRGB(75, 50, 40),
+        Grad2 = Color3.fromRGB(18, 12, 10)
+    }
+}
+local ThemeIdx = 1
+local Theme = Themes[ThemeIdx]
+
+--====================================================================
+--   AUDIO & SOUND CUSTOMIZER ENGINE
+--====================================================================
+local function PlaySFX(soundType)
+    if not Config.SoundEnabled then return end
+    local sound = Instance.new("Sound")
+    sound.Volume = Config.SoundVolume
+    if soundType == "Click" then
+        if Config.SoundProfile == "Bubble" then
+            sound.SoundId = "rbxassetid://9114221375"
+        elseif Config.SoundProfile == "Cozy Chime" then
+            sound.SoundId = "rbxassetid://6026984224"
+        else
+            sound.SoundId = "rbxassetid://6895079853"
+        end
+    elseif soundType == "Toggle" then
+        sound.SoundId = "rbxassetid://452267918"
+    elseif soundType == "Notify" then
+        sound.SoundId = "rbxassetid://6026984224"
+    elseif soundType == "Alarm" then
+        sound.SoundId = "rbxassetid://5153724231"
+        sound.Volume = 1.0
+    end
+    sound.Parent = SoundService
+    sound:Play()
+    sound.Ended:Connect(function() sound:Destroy() end)
+end
+
+--====================================================================
+--   DISCORD WEBHOOK SYSTEM & HOURLY DIGEST
+--====================================================================
+local function SendWebhook(title, description)
+    if not Config.WebhookEnabled or Config.WebhookUrl == "" then return end
+    task.spawn(function()
+        pcall(function()
+            local data = {
+                ["embeds"] = {{
+                    ["title"] = "🐾 Paw-Luxe Alert: " .. title,
+                    ["description"] = description,
+                    ["color"] = 16738192,
+                    ["footer"] = {["text"] = "Player: " .. Player.Name}
+                }}
+            }
+            local encoded = HttpService:JSONEncode(data)
+            local req = (syn and syn.request) or http_request or request
+            if req then
+                req({
+                    Url = Config.WebhookUrl,
+                    Method = "POST",
+                    Headers = {["Content-Type"] = "application/json"},
+                    Body = encoded
+                })
+            end
+        end)
+    end)
+end
+
+--====================================================================
+--   SCREEN GUI & NOTIFICATIONS
+--====================================================================
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "PawLuxe_AntiAFK"
+Gui.ResetOnSpawn = false
+Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+Gui.IgnoreGuiInset = true
+Gui.Parent = PlayerGui
+
+local ToastHolder = Instance.new("Frame")
+ToastHolder.Size = UDim2.fromOffset(260, 300)
+ToastHolder.Position = UDim2.new(1, -275, 1, -315)
+ToastHolder.BackgroundTransparency = 1
+ToastHolder.Parent = Gui
+
+local ToastLayout = Instance.new("UIListLayout")
+ToastLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+ToastLayout.Padding = UDim.new(0, 8)
+ToastLayout.Parent = ToastHolder
+
+local function Notify(title, text)
+    PlaySFX("Notify")
+    table.insert(Session.NotificationLog, {Title = title, Text = text, Time = os.date("%H:%M:%S")})
+
+    local Toast = Instance.new("Frame")
+    Toast.Size = UDim2.new(1, 0, 0, 54)
+    Toast.BackgroundColor3 = Theme.BgSecondary
+    Toast.BackgroundTransparency = 0
+    Toast.ClipsDescendants = true
+    Toast.Parent = ToastHolder
+
+    local TC = Instance.new("UICorner")
+    TC.CornerRadius = UDim.new(0, 12)
+    TC.Parent = Toast
+
+    local TS = Instance.new("UIStroke")
+    TS.Color = Theme.Accent
+    TS.Thickness = 1.6
+    TS.Parent = Toast
+
+    local Bar = Instance.new("Frame")
+    Bar.Size = UDim2.new(0, 4, 1, 0)
+    Bar.BackgroundColor3 = Theme.Accent
+    Bar.BorderSizePixel = 0
+    Bar.Parent = Toast
+
+    local T1 = Instance.new("TextLabel")
+    T1.Size = UDim2.new(1, -20, 0, 20)
+    T1.Position = UDim2.fromOffset(14, 7)
+    T1.BackgroundTransparency = 1
+    T1.Text = title
+    T1.TextColor3 = Color3.new(
+        math.clamp(Theme.Accent.R * Config.TextLightness, 0, 1),
+        math.clamp(Theme.Accent.G * Config.TextLightness, 0, 1),
+        math.clamp(Theme.Accent.B * Config.TextLightness, 0, 1)
+    )
+    T1.Font = Enum.Font.GothamBold
+    T1.TextSize = 13
+    T1.TextXAlignment = Enum.TextXAlignment.Left
+    T1.Parent = Toast
+
+    local T2 = Instance.new("TextLabel")
+    T2.Size = UDim2.new(1, -20, 0, 18)
+    T2.Position = UDim2.fromOffset(14, 27)
+    T2.BackgroundTransparency = 1
+    T2.Text = text
+    T2.TextColor3 = Color3.new(
+        math.clamp(Theme.TextMain.R * Config.TextLightness, 0, 1),
+        math.clamp(Theme.TextMain.G * Config.TextLightness, 0, 1),
+        math.clamp(Theme.TextMain.B * Config.TextLightness, 0, 1)
+    )
+    T2.Font = Enum.Font.Gotham
+    T2.TextSize = 11
+    T2.TextXAlignment = Enum.TextXAlignment.Left
+    T2.Parent = Toast
+
+    Toast.Position = UDim2.new(1, 40, 0, 0)
+    TweenService:Create(Toast, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+
+    task.delay(3, function()
+        if Toast and Toast.Parent then
+            local out = TweenService:Create(Toast, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1})
+            TweenService:Create(TS, TweenInfo.new(0.25), {Transparency = 1}):Play()
+            TweenService:Create(T1, TweenInfo.new(0.25), {TextTransparency = 1}):Play()
+            TweenService:Create(T2, TweenInfo.new(0.25), {TextTransparency = 1}):Play()
+            out:Play()
+            out.Completed:Connect(function() Toast:Destroy() end)
+        end
+    end)
+end
+
+--====================================================================
+--   MAIN PREMIUM WINDOW
+--====================================================================
+local Main = Instance.new("Frame")
+Main.Name = "MainFrame"
+Main.Size = UDim2.fromOffset(540, 360)
+Main.Position = UDim2.new(0.5, -270, 0.5, -180)
+Main.BackgroundColor3 = Theme.BgPrimary
+Main.BorderSizePixel = 0
+Main.ClipsDescendants = true
+Main.Parent = Gui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 18)
+MainCorner.Parent = Main
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Theme.Secondary
+MainStroke.Thickness = 2
+MainStroke.Transparency = 0
+MainStroke.Parent = Main
+
+local UIScaleObj = Instance.new("UIScale")
+UIScaleObj.Scale = Config.UIScale
+UIScaleObj.Parent = Main
+
+local MainGrad = Instance.new("UIGradient")
+MainGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Theme.Grad1),
+    ColorSequenceKeypoint.new(1, Theme.Grad2)
+})
+MainGrad.Rotation = 35
+MainGrad.Parent = Main
+
+-- Track all text labels for dynamic lightness updates
+local AllTextLabels = {}
+local function RegisterText(lbl, isAccent)
+    table.insert(AllTextLabels, {Label = lbl, IsAccent = isAccent})
+    local base = isAccent and Theme.Accent or Theme.TextMain
+    lbl.TextColor3 = Color3.new(
+        math.clamp(base.R * Config.TextLightness, 0, 1),
+        math.clamp(base.G * Config.TextLightness, 0, 1),
+        math.clamp(base.B * Config.TextLightness, 0, 1)
+    )
+end
+
+local function UpdateAllTextLightness()
+    for _, item in ipairs(AllTextLabels) do
+        if item.Label and item.Label.Parent then
+            local base = item.IsAccent and Theme.Accent or Theme.TextMain
+            item.Label.TextColor3 = Color3.new(
+                math.clamp(base.R * Config.TextLightness, 0, 1),
+                math.clamp(base.G * Config.TextLightness, 0, 1),
+                math.clamp(base.B * Config.TextLightness, 0, 1)
+            )
+        end
+    end
+end
+
+--====================================================================
+--   MINI WIDGET / COMPACT STATS MODE
+--====================================================================
+local MiniWidget = Instance.new("TextButton")
+MiniWidget.Name = "MiniWidget"
+MiniWidget.Size = UDim2.fromOffset(190, 42)
+MiniWidget.Position = UDim2.new(0.5, -95, 0, 20)
+MiniWidget.BackgroundColor3 = Theme.BgSecondary
+MiniWidget.AutoButtonColor = false
+MiniWidget.Visible = false
+MiniWidget.ZIndex = 50
+MiniWidget.Parent = Gui
+
+local MWCorner = Instance.new("UICorner")
+MWCorner.CornerRadius = UDim.new(1, 0)
+MWCorner.Parent = MiniWidget
+
+local MWStroke = Instance.new("UIStroke")
+MWStroke.Color = Theme.Accent
+MWStroke.Thickness = 1.6
+MWStroke.Parent = MiniWidget
+
+local MWLabel = Instance.new("TextLabel")
+MWLabel.Size = UDim2.new(1, 0, 1, 0)
+MWLabel.BackgroundTransparency = 1
+MWLabel.Text = "🐾 00:00:00 | $0"
+MWLabel.Font = Enum.Font.GothamBold
+MWLabel.TextSize = 11
+MWLabel.ZIndex = 51
+MWLabel.Parent = MiniWidget
+RegisterText(MWLabel, false)
+
+local function MakeDraggable(obj, handle)
+    local dragging, dragStart, startPos
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = obj.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            obj.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+MakeDraggable(Main, Main)
+MakeDraggable(MiniWidget, MiniWidget)
+
+--====================================================================
+--   SIDEBAR NAVIGATION
+--====================================================================
+local Sidebar = Instance.new("Frame")
+Sidebar.Size = UDim2.new(0, 155, 1, 0)
+Sidebar.BackgroundColor3 = Theme.BgSecondary
+Sidebar.BackgroundTransparency = 0
+Sidebar.BorderSizePixel = 0
+Sidebar.ZIndex = 3
+Sidebar.Parent = Main
+
+local SideLine = Instance.new("Frame")
+SideLine.Size = UDim2.new(0, 1, 1, 0)
+SideLine.Position = UDim2.new(1, 0, 0, 0)
+SideLine.BackgroundColor3 = Theme.Secondary
+SideLine.BackgroundTransparency = 0.2
+SideLine.BorderSizePixel = 0
+SideLine.ZIndex = 4
+SideLine.Parent = Sidebar
+
+local BrandIcon = Instance.new("TextLabel")
+BrandIcon.Size = UDim2.fromOffset(36, 36)
+BrandIcon.Position = UDim2.fromOffset(14, 16)
+BrandIcon.BackgroundTransparency = 1
+BrandIcon.Text = "🐾"
+BrandIcon.TextSize = 26
+BrandIcon.ZIndex = 4
+BrandIcon.Parent = Sidebar
+RegisterText(BrandIcon, true)
+
+local BrandTitle = Instance.new("TextLabel")
+BrandTitle.Size = UDim2.fromOffset(95, 22)
+BrandTitle.Position = UDim2.fromOffset(52, 16)
+BrandTitle.BackgroundTransparency = 1
+BrandTitle.Text = "PAW-LUXE"
+BrandTitle.Font = Enum.Font.GothamBlack
+BrandTitle.TextSize = 15
+BrandTitle.TextXAlignment = Enum.TextXAlignment.Left
+BrandTitle.ZIndex = 4
+BrandTitle.Parent = Sidebar
+RegisterText(BrandTitle, false)
+
+local BrandBadge = Instance.new("TextLabel")
+BrandBadge.Size = UDim2.fromOffset(76, 16)
+BrandBadge.Position = UDim2.fromOffset(52, 37)
+BrandBadge.BackgroundColor3 = Theme.Accent
+BrandBadge.BackgroundTransparency = 0.7
+BrandBadge.Text = "GOD-TIER v9.1"
+BrandBadge.Font = Enum.Font.GothamBold
+BrandBadge.TextSize = 9
+BrandBadge.ZIndex = 4
+BrandBadge.Parent = Sidebar
+local BBC = Instance.new("UICorner")
+BBC.CornerRadius = UDim.new(0, 4)
+BBC.Parent = BrandBadge
+RegisterText(BrandBadge, false)
+
+local TabContainer = Instance.new("Frame")
+TabContainer.Size = UDim2.new(1, -20, 0, 260)
+TabContainer.Position = UDim2.fromOffset(10, 68)
+TabContainer.BackgroundTransparency = 1
+TabContainer.ZIndex = 4
+TabContainer.Parent = Sidebar
+
+local TabList = Instance.new("UIListLayout")
+TabList.Padding = UDim.new(0, 3)
+TabList.Parent = TabContainer
+
+local Tabs = {}
+local Pages = {}
+
+local function CreateTab(name, icon)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 28)
+    btn.BackgroundColor3 = Theme.ButtonSolid
+    btn.BackgroundTransparency = 1
+    btn.Text = "  " .. icon .. "   " .. name
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 11
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.AutoButtonColor = false
+    btn.ZIndex = 5
+    btn.Parent = TabContainer
+    RegisterText(btn, false)
+
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 8)
+    c.Parent = btn
+
+    local ind = Instance.new("Frame")
+    ind.Size = UDim2.new(0, 3, 0.6, 0)
+    ind.Position = UDim2.new(0, 2, 0.2, 0)
+    ind.BackgroundColor3 = Theme.Accent
+    ind.BackgroundTransparency = 1
+    ind.BorderSizePixel = 0
+    ind.ZIndex = 6
+    ind.Parent = btn
+    local ic = Instance.new("UICorner")
+    ic.CornerRadius = UDim.new(1, 0)
+    ic.Parent = ind
+
+    Tabs[name] = {Button = btn, Indicator = ind}
+    return btn
+end
+
+CreateTab("Dashboard", "🏠")
+CreateTab("Protection", "🛡️")
+CreateTab("Themes", "🎨")
+CreateTab("Utilities", "⚡")
+CreateTab("Mini-Game", "🎮")
+CreateTab("Webhook", "🌐")
+CreateTab("History", "📋")
+CreateTab("Credits", "💖")
+
+local SelfDestructBtn = Instance.new("TextButton")
+SelfDestructBtn.Size = UDim2.new(1, -20, 0, 26)
+SelfDestructBtn.Position = UDim2.new(0, 10, 1, -34)
+SelfDestructBtn.BackgroundColor3 = Color3.fromRGB(185, 40, 75)
+SelfDestructBtn.Text = "☠  Self Destruct"
+SelfDestructBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SelfDestructBtn.Font = Enum.Font.GothamBold
+SelfDestructBtn.TextSize = 11
+SelfDestructBtn.AutoButtonColor = false
+SelfDestructBtn.ZIndex = 5
+SelfDestructBtn.Parent = Sidebar
+local SDC = Instance.new("UICorner")
+SDC.CornerRadius = UDim.new(0, 7)
+SDC.Parent = SelfDestructBtn
+
+--====================================================================
+--   TOP BAR & CONTENT AREA
+--====================================================================
+local ContentArea = Instance.new("Frame")
+ContentArea.Size = UDim2.new(1, -155, 1, 0)
+ContentArea.Position = UDim2.fromOffset(155, 0)
+ContentArea.BackgroundTransparency = 1
+ContentArea.ZIndex = 3
+ContentArea.Parent = Main
+
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, -24, 0, 34)
+TopBar.Position = UDim2.fromOffset(12, 12)
+TopBar.BackgroundColor3 = Theme.Card
+TopBar.BackgroundTransparency = 0
+TopBar.ZIndex = 4
+TopBar.Parent = ContentArea
+local TBC = Instance.new("UICorner")
+TBC.CornerRadius = UDim.new(0, 10)
+TBC.Parent = TopBar
+
+local PerfLabel = Instance.new("TextLabel")
+PerfLabel.Size = UDim2.new(1, -20, 1, 0)
+PerfLabel.Position = UDim2.fromOffset(12, 0)
+PerfLabel.BackgroundTransparency = 1
+PerfLabel.Text = "FPS: 60  •  Ping: 45ms  •  RightShift"
+PerfLabel.Font = Enum.Font.GothamSemibold
+PerfLabel.TextSize = 11
+PerfLabel.TextXAlignment = Enum.TextXAlignment.Left
+PerfLabel.ZIndex = 5
+PerfLabel.Parent = TopBar
+RegisterText(PerfLabel, false)
+
+MakeDraggable(Main, TopBar)
+
+-- MINIMIZE BUTTON
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.fromOffset(28, 28)
+CloseBtn.Position = UDim2.new(1, -38, 1, -38)
+CloseBtn.BackgroundColor3 = Theme.ButtonSolid
+CloseBtn.Text = "—"
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 14
+CloseBtn.ZIndex = 15
+CloseBtn.Parent = Main
+RegisterText(CloseBtn, false)
+local CBC = Instance.new("UICorner")
+CBC.CornerRadius = UDim.new(0, 8)
+CBC.Parent = CloseBtn
+local CBS = Instance.new("UIStroke")
+CBS.Color = Theme.Accent
+CBS.Thickness = 1.4
+CBS.Parent = CloseBtn
+
+local PageHolder = Instance.new("Frame")
+PageHolder.Size = UDim2.new(1, -24, 1, -62)
+PageHolder.Position = UDim2.fromOffset(12, 54)
+PageHolder.BackgroundTransparency = 1
+PageHolder.ZIndex = 4
+PageHolder.Parent = ContentArea
+
+local function CreatePage(name)
+    local p = Instance.new("ScrollingFrame")
+    p.Name = name
+    p.Size = UDim2.new(1, 0, 1, 0)
+    p.BackgroundTransparency = 1
+    p.BorderSizePixel = 0
+    p.ScrollBarThickness = 2
+    p.ScrollBarImageColor3 = Theme.Accent
+    p.CanvasSize = UDim2.new(0, 0, 0, 0)
+    p.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    p.Visible = false
+    p.ZIndex = 4
+    p.Parent = PageHolder
+
+    local l = Instance.new("UIListLayout")
+    l.Padding = UDim.new(0, 10)
+    l.Parent = p
+
+    Pages[name] = p
+    return p
+end
+
+local PageDash = CreatePage("Dashboard")
+local PageMethod = CreatePage("Protection")
+local PageVisuals = CreatePage("Themes")
+local PageTools = CreatePage("Utilities")
+local PageGame = CreatePage("Mini-Game")
+local PageWebhook = CreatePage("Webhook")
+local PageHistory = CreatePage("History")
+local PageCreds = CreatePage("Credits")
+
+local ThemedCards = {}
+local ThemedStrokes = {}
+local ThemedAccents = {}
+local WallpaperImages = {}
+
+local function MakeCard(parent, height)
+    local f = Instance.new("Frame")
+    f.Size = UDim2.new(1, -4, 0, height)
+    f.BackgroundColor3 = Theme.Card
+    f.BackgroundTransparency = 0
+    f.ZIndex = 5
+    f.Parent = parent
+
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 12)
+    c.Parent = f
+
+    local s = Instance.new("UIStroke")
+    s.Color = Theme.Secondary
+    s.Thickness = 1.4
+    s.Transparency = 0.2
+    s.Parent = f
+
+    local bgImg = Instance.new("ImageLabel")
+    bgImg.Size = UDim2.new(1, 0, 1, 0)
+    bgImg.BackgroundTransparency = 1
+    bgImg.Image = Config.WallpaperAsset ~= "" and ("rbxassetid://" .. Config.WallpaperAsset) or ""
+    bgImg.ImageTransparency = 0.75
+    bgImg.ScaleType = Enum.ScaleType.Slice
+    bgImg.ZIndex = 5
+    bgImg.Parent = f
+    local bgCorner = Instance.new("UICorner")
+    bgCorner.CornerRadius = UDim.new(0, 12)
+    bgCorner.Parent = bgImg
+
+    table.insert(ThemedCards, f)
+    table.insert(ThemedStrokes, s)
+    table.insert(WallpaperImages, bgImg)
+    return f
+end
+
+--====================================================================
+--   PAGE 1: DASHBOARD
+--====================================================================
+local HeroCard = MakeCard(PageDash, 95)
+
+local StatusDot = Instance.new("Frame")
+StatusDot.Size = UDim2.fromOffset(10, 10)
+StatusDot.Position = UDim2.fromOffset(16, 18)
+StatusDot.BackgroundColor3 = Color3.fromRGB(100, 240, 165)
+StatusDot.ZIndex = 6
+StatusDot.Parent = HeroCard
+local SDCirc = Instance.new("UICorner")
+SDCirc.CornerRadius = UDim.new(1, 0)
+SDCirc.Parent = StatusDot
+
+local StatusText = Instance.new("TextLabel")
+StatusText.Size = UDim2.new(1, -40, 0, 20)
+StatusText.Position = UDim2.fromOffset(34, 13)
+StatusText.BackgroundTransparency = 1
+StatusText.Text = Config.CustomStatusText
+StatusText.TextColor3 = Color3.fromRGB(100, 240, 165)
+StatusText.Font = Enum.Font.GothamBlack
+StatusText.TextSize = 13
+StatusText.TextXAlignment = Enum.TextXAlignment.Left
+StatusText.ZIndex = 6
+StatusText.Parent = HeroCard
+RegisterText(StatusText, false)
+
+local MainToggleBtn = Instance.new("TextButton")
+MainToggleBtn.Size = UDim2.new(1, -32, 0, 42)
+MainToggleBtn.Position = UDim2.fromOffset(16, 40)
+MainToggleBtn.BackgroundColor3 = Theme.Accent
+MainToggleBtn.Text = "🐾   Anti-AFK: ENABLED"
+MainToggleBtn.TextColor3 = Color3.fromRGB(20, 12, 30)
+MainToggleBtn.Font = Enum.Font.GothamBlack
+MainToggleBtn.TextSize = 15
+MainToggleBtn.AutoButtonColor = false
+MainToggleBtn.ZIndex = 6
+MainToggleBtn.Parent = HeroCard
+local MTC = Instance.new("UICorner")
+MTC.CornerRadius = UDim.new(0, 10)
+MTC.Parent = MainToggleBtn
+
+local StatsRow = Instance.new("Frame")
+StatsRow.Size = UDim2.new(1, -4, 0, 75)
+StatsRow.BackgroundTransparency = 1
+StatsRow.ZIndex = 5
+StatsRow.Parent = PageDash
+
+local StatBox1 = MakeCard(StatsRow, 75)
+StatBox1.Size = UDim2.new(0.485, 0, 1, 0)
+
+local S1Title = Instance.new("TextLabel")
+S1Title.Size = UDim2.new(1, -20, 0, 18)
+S1Title.Position = UDim2.fromOffset(12, 12)
+S1Title.BackgroundTransparency = 1
+S1Title.Text = "⏱️ SESSION TIMER"
+S1Title.Font = Enum.Font.GothamBold
+S1Title.TextSize = 10
+S1Title.TextXAlignment = Enum.TextXAlignment.Left
+S1Title.ZIndex = 6
+S1Title.Parent = StatBox1
+RegisterText(S1Title, false)
+
+local TimerValue = Instance.new("TextLabel")
+TimerValue.Size = UDim2.new(1, -20, 0, 28)
+TimerValue.Position = UDim2.fromOffset(12, 32)
+TimerValue.BackgroundTransparency = 1
+TimerValue.Text = "00:00:00"
+TimerValue.Font = Enum.Font.GothamBlack
+TimerValue.TextSize = 20
+TimerValue.TextXAlignment = Enum.TextXAlignment.Left
+TimerValue.ZIndex = 6
+TimerValue.Parent = StatBox1
+RegisterText(TimerValue, false)
+
+local StatBox2 = MakeCard(StatsRow, 75)
+StatBox2.Size = UDim2.new(0.485, 0, 1, 0)
+StatBox2.Position = UDim2.new(0.515, 0, 0, 0)
+
+local S2Title = Instance.new("TextLabel")
+S2Title.Size = UDim2.new(1, -20, 0, 18)
+S2Title.Position = UDim2.fromOffset(12, 12)
+S2Title.BackgroundTransparency = 1
+S2Title.Text = "💰 ESTIMATED EARNINGS"
+S2Title.Font = Enum.Font.GothamBold
+S2Title.TextSize = 10
+S2Title.TextXAlignment = Enum.TextXAlignment.Left
+S2Title.ZIndex = 6
+S2Title.Parent = StatBox2
+RegisterText(S2Title, false)
+
+local EarningsValue = Instance.new("TextLabel")
+EarningsValue.Size = UDim2.new(1, -20, 0, 28)
+EarningsValue.Position = UDim2.fromOffset(12, 32)
+EarningsValue.BackgroundTransparency = 1
+EarningsValue.Text = "$0"
+EarningsValue.Font = Enum.Font.GothamBlack
+EarningsValue.TextSize = 20
+EarningsValue.TextXAlignment = Enum.TextXAlignment.Left
+EarningsValue.ZIndex = 6
+EarningsValue.Parent = StatBox2
+RegisterText(EarningsValue, true)
+table.insert(ThemedAccents, EarningsValue)
+
+local QuickCard = MakeCard(PageDash, 54)
+local QLabel = Instance.new("TextLabel")
+QLabel.Size = UDim2.new(0.55, 0, 1, 0)
+QLabel.Position = UDim2.fromOffset(14, 0)
+QLabel.BackgroundTransparency = 1
+QLabel.Text = "⚡ Test Anti-AFK Pulse Now"
+QLabel.Font = Enum.Font.GothamBold
+QLabel.TextSize = 12
+QLabel.TextXAlignment = Enum.TextXAlignment.Left
+QLabel.ZIndex = 6
+QLabel.Parent = QuickCard
+RegisterText(QLabel, false)
+
+local TestPulseBtn = Instance.new("TextButton")
+TestPulseBtn.Size = UDim2.fromOffset(110, 30)
+TestPulseBtn.Position = UDim2.new(1, -122, 0.5, -15)
+TestPulseBtn.BackgroundColor3 = Theme.ButtonSolid
+TestPulseBtn.Text = "Trigger Pulse"
+TestPulseBtn.Font = Enum.Font.GothamBold
+TestPulseBtn.TextSize = 11
+TestPulseBtn.ZIndex = 6
+TestPulseBtn.Parent = QuickCard
+RegisterText(TestPulseBtn, false)
+local TPC = Instance.new("UICorner")
+TPC.CornerRadius = UDim.new(0, 8)
+TPC.Parent = TestPulseBtn
+
+--====================================================================
+--   PAGE 2: PROTECTION SETTINGS
+--====================================================================
+local MethodCard = MakeCard(PageMethod, 115)
+local MTitle = Instance.new("TextLabel")
+MTitle.Size = UDim2.new(1, -24, 0, 22)
+MTitle.Position = UDim2.fromOffset(14, 10)
+MTitle.BackgroundTransparency = 1
+MTitle.Text = "🐾 Anti-AFK Simulation Method"
+MTitle.Font = Enum.Font.GothamBold
+MTitle.TextSize = 13
+MTitle.TextXAlignment = Enum.TextXAlignment.Left
+MTitle.ZIndex = 6
+MTitle.Parent = MethodCard
+RegisterText(MTitle, false)
+
+local Methods = {"Virtual Click", "Camera Nudge", "Micro Hop"}
+local MethodBtns = {}
+
+for i, mName in ipairs(Methods) do
+    local mb = Instance.new("TextButton")
+    mb.Size = UDim2.new(0.3, 0, 0, 36)
+    mb.Position = UDim2.new(0.03 + (i - 1) * 0.32, 0, 0, 42)
+    mb.BackgroundColor3 = (Config.Method == mName) and Theme.Accent or Theme.ButtonSolid
+    mb.Text = mName
+    mb.Font = Enum.Font.GothamBold
+    mb.TextSize = 11
+    mb.ZIndex = 6
+    mb.Parent = MethodCard
+    RegisterText(mb, false)
+    local mbc = Instance.new("UICorner")
+    mbc.CornerRadius = UDim.new(0, 8)
+    mbc.Parent = mb
+    MethodBtns[mName] = mb
+
+    mb.MouseButton1Click:Connect(function()
+        PlaySFX("Click")
+        Config.Method = mName
+        for name, b in pairs(MethodBtns) do
+            b.BackgroundColor3 = (name == mName) and Theme.Accent or Theme.ButtonSolid
+        end
+        Notify("Method Updated", "Using " .. mName .. " mode")
+        SaveConfig()
+    end)
+end
+
+local MDesc = Instance.new("TextLabel")
+MDesc.Size = UDim2.new(1, -28, 0, 20)
+MDesc.Position = UDim2.fromOffset(14, 86)
+MDesc.BackgroundTransparency = 1
+MDesc.Text = "Triggers automatically on idle + every interval cycle."
+MDesc.TextColor3 = Theme.TextMuted
+MDesc.Font = Enum.Font.Gotham
+MDesc.TextSize = 11
+MDesc.TextXAlignment = Enum.TextXAlignment.Left
+MDesc.ZIndex = 6
+MDesc.Parent = MethodCard
+RegisterText(MDesc, false)
+
+local AntiModCard = MakeCard(PageMethod, 54)
+local AMLbl = Instance.new("TextLabel")
+AMLbl.Size = UDim2.new(0.65, 0, 1, 0)
+AMLbl.Position = UDim2.fromOffset(14, 0)
+AMLbl.BackgroundTransparency = 1
+AMLbl.Text = "🛡️ Anti-Moderator Server Hop"
+AMLbl.Font = Enum.Font.GothamBold
+AMLbl.TextSize = 12
+AMLbl.TextXAlignment = Enum.TextXAlignment.Left
+AMLbl.ZIndex = 6
+AMLbl.Parent = AntiModCard
+RegisterText(AMLbl, false)
+
+local AMBtn = Instance.new("TextButton")
+AMBtn.Size = UDim2.fromOffset(64, 26)
+AMBtn.Position = UDim2.new(1, -76, 0.5, -13)
+AMBtn.BackgroundColor3 = Config.AntiModEnabled and Theme.Accent or Theme.ButtonSolid
+AMBtn.Text = Config.AntiModEnabled and "ON" or "OFF"
+AMBtn.Font = Enum.Font.GothamBlack
+AMBtn.TextSize = 11
+AMBtn.ZIndex = 6
+AMBtn.Parent = AntiModCard
+RegisterText(AMBtn, false)
+local AMC = Instance.new("UICorner")
+AMC.CornerRadius = UDim.new(0, 7)
+AMC.Parent = AMBtn
+
+AMBtn.MouseButton1Click:Connect(function()
+    Config.AntiModEnabled = not Config.AntiModEnabled
+    PlaySFX("Toggle")
+    AMBtn.BackgroundColor3 = Config.AntiModEnabled and Theme.Accent or Theme.ButtonSolid
+    AMBtn.Text = Config.AntiModEnabled and "ON" or "OFF"
+    Notify("Anti-Mod System", Config.AntiModEnabled and "Active (Will hop if staff joins)" or "Disabled")
+    SaveConfig()
+end)
+
+Players.PlayerAdded:Connect(function(newPlr)
+    if Config.AntiModEnabled then
+        pcall(function()
+            if newPlr:IsInGroup(1200) or newPlr.AccountAge < 10 then
+                Notify("⚠️ MODERATOR DETECTED", "Hopping servers instantly...")
+                SendWebhook("Anti-Mod Hop", "Detected suspicious player: " .. newPlr.Name .. ". Hopping servers.")
+                TeleportService:Teleport(game.PlaceId, Player)
+            end
+        end)
+    end
+end)
+
+--====================================================================
+--   PAGE 3: THEMES (WITH TEXT LIGHTNESS SLIDER & WALLPAPER)
+--====================================================================
+local ThemeCard = MakeCard(PageVisuals, 145)
+local TTitle = Instance.new("TextLabel")
+TTitle.Size = UDim2.new(1, -24, 0, 22)
+TTitle.Position = UDim2.fromOffset(14, 10)
+TTitle.BackgroundTransparency = 1
+TTitle.Text = "🎨 Select Cozy Palette"
+TTitle.Font = Enum.Font.GothamBold
+TTitle.TextSize = 13
+TTitle.TextXAlignment = Enum.TextXAlignment.Left
+TTitle.ZIndex = 6
+TTitle.Parent = ThemeCard
+RegisterText(TTitle, false)
+
+local ApplyTheme
+local ThemeBtnsList = {}
+
+for i, th in ipairs(Themes) do
+    local row = math.floor((i - 1) / 2)
+    local col = (i - 1) % 2
+    local tb = Instance.new("TextButton")
+    tb.Size = UDim2.new(0.45, 0, 0, 42)
+    tb.Position = UDim2.new(0.035 + col * 0.48, 0, 0, 42 + row * 50)
+    tb.BackgroundColor3 = th.ButtonSolid
+    tb.Text = th.Name
+    tb.Font = Enum.Font.GothamBold
+    tb.TextSize = 12
+    tb.ZIndex = 6
+    tb.Parent = ThemeCard
+    RegisterText(tb, false)
+    local tbc = Instance.new("UICorner")
+    tbc.CornerRadius = UDim.new(0, 9)
+    tbc.Parent = tb
+    local tbs = Instance.new("UIStroke")
+    tbs.Color = th.Accent
+    tbs.Thickness = 1.6
+    tbs.Parent = tb
+
+    table.insert(ThemeBtnsList, {Button = tb, Stroke = tbs, ThemeRef = th})
+
+    tb.MouseButton1Click:Connect(function()
+        PlaySFX("Click")
+        ThemeIdx = i
+        ApplyTheme(th)
+        Notify("Theme Applied", th.Name)
+        SaveConfig()
+    end)
+end
+
+-- Text Lightness Slider Card
+local TextLightCard = MakeCard(PageVisuals, 75)
+local TLTitle = Instance.new("TextLabel")
+TLTitle.Size = UDim2.new(1, -24, 0, 20)
+TLTitle.Position = UDim2.fromOffset(14, 10)
+TLTitle.BackgroundTransparency = 1
+TLTitle.Text = "💡 Text Lightness Level (" .. math.floor(Config.TextLightness * 100) .. "%)"
+TLTitle.Font = Enum.Font.GothamBold
+TLTitle.TextSize = 12
+TLTitle.TextXAlignment = Enum.TextXAlignment.Left
+TLTitle.ZIndex = 6
+TLTitle.Parent = TextLightCard
+RegisterText(TLTitle, false)
+
+local TLSliderBg = Instance.new("Frame")
+TLSliderBg.Size = UDim2.new(1, -28, 0, 10)
+TLSliderBg.Position = UDim2.fromOffset(14, 42)
+TLSliderBg.BackgroundColor3 = Theme.ButtonSolid
+TLSliderBg.ZIndex = 6
+TLSliderBg.Parent = TextLightCard
+local TLSBrd = Instance.new("UICorner")
+TLSBrd.CornerRadius = UDim.new(1, 0)
+TLSBrd.Parent = TLSliderBg
+
+local TLSliderFill = Instance.new("Frame")
+TLSliderFill.Size = UDim2.new((Config.TextLightness - 0.5) / 1.0, 0, 1, 0) -- Scaled 0.5 to 1.5 range
+TLSliderFill.BackgroundColor3 = Theme.Accent
+TLSliderFill.ZIndex = 7
+TLSliderFill.Parent = TLSliderBg
+local TLSFillCorner = Instance.new("UICorner")
+TLSFillCorner.CornerRadius = UDim.new(1, 0)
+TLSFillCorner.Parent = TLSliderFill
+
+local TLBtn = Instance.new("TextButton")
+TLBtn.Size = UDim2.new(1, 0, 1, 0)
+TLBtn.BackgroundTransparency = 1
+TLBtn.Text = ""
+TLBtn.ZIndex = 8
+TLBtn.Parent = TLSliderBg
+
+TLBtn.MouseButton1Down:Connect(function()
+    local mouseConn
+    mouseConn = RunService.RenderStepped:Connect(function()
+        if not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+            mouseConn:Disconnect()
+            SaveConfig()
+            return
+        end
+        local mPos = UserInputService:GetMouseLocation().X
+        local barPos = TLSliderBg.AbsolutePosition.X
+        local barSize = TLSliderBg.AbsoluteSize.X
+        local ratio = math.clamp((mPos - barPos) / barSize, 0, 1)
+        Config.TextLightness = 0.5 + (ratio * 1.0) -- Range from 50% to 150%
+        TLSliderFill.Size = UDim2.new(ratio, 0, 1, 0)
+        TLTitle.Text = "💡 Text Lightness Level (" .. math.floor(Config.TextLightness * 100) .. "%)"
+        UpdateAllTextLightness()
+    end)
+end)
+
+-- Wallpaper Input Card
+local WallpaperCard = MakeCard(PageVisuals, 85)
+local WPTit = Instance.new("TextLabel")
+WPTit.Size = UDim2.new(1, -24, 0, 22)
+WPTit.Position = UDim2.fromOffset(14, 10)
+WPTit.BackgroundTransparency = 1
+WPTit.Text = "🖼️ Custom Wallpaper Asset ID"
+WPTit.Font = Enum.Font.GothamBold
+WPTit.TextSize = 13
+WPTit.TextXAlignment = Enum.TextXAlignment.Left
+WPTit.ZIndex = 6
+WPTit.Parent = WallpaperCard
+RegisterText(WPTit, false)
+
+local WPTextBox = Instance.new("TextBox")
+WPTextBox.Size = UDim2.new(1, -28, 0, 36)
+WPTextBox.Position = UDim2.fromOffset(14, 38)
+WPTextBox.BackgroundColor3 = Theme.ButtonSolid
+WPTextBox.Text = Config.WallpaperAsset
+WPTextBox.PlaceholderText = "Paste Decal Asset ID..."
+WPTextBox.Font = Enum.Font.GothamSemibold
+WPTextBox.TextSize = 12
+WPTextBox.ClearTextOnFocus = false
+WPTextBox.ZIndex = 6
+WPTextBox.Parent = WallpaperCard
+RegisterText(WPTextBox, false)
+local WPTC = Instance.new("UICorner")
+WPTC.CornerRadius = UDim.new(0, 8)
+WPTC.Parent = WPTextBox
+
+WPTextBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        Config.WallpaperAsset = WPTextBox.Text
+        for _, img in ipairs(WallpaperImages) do
+            img.Image = Config.WallpaperAsset ~= "" and ("rbxassetid://" .. Config.WallpaperAsset) or ""
+        end
+        Notify("Wallpaper Updated", "Background image applied!")
+        SaveConfig()
+    end
+end)
+
+local ScaleCard = MakeCard(PageVisuals, 85)
+local ScTitle = Instance.new("TextLabel")
+ScTitle.Size = UDim2.new(1, -24, 0, 22)
+ScTitle.Position = UDim2.fromOffset(14, 10)
+ScTitle.BackgroundTransparency = 1
+ScTitle.Text = "🔍 Window Scale"
+ScTitle.Font = Enum.Font.GothamBold
+ScTitle.TextSize = 13
+ScTitle.TextXAlignment = Enum.TextXAlignment.Left
+ScTitle.ZIndex = 6
+ScTitle.Parent = ScaleCard
+RegisterText(ScTitle, false)
+
+local Scales = {0.85, 1.0, 1.15, 1.25}
+local ScaleBtns = {}
+for i, sc in ipairs(Scales) do
+    local sb = Instance.new("TextButton")
+    sb.Size = UDim2.new(0.215, 0, 0, 34)
+    sb.Position = UDim2.new(0.03 + (i - 1) * 0.24, 0, 0, 38)
+    sb.BackgroundColor3 = (Config.UIScale == sc) and Theme.Accent or Theme.ButtonSolid
+    sb.Text = math.floor(sc * 100) .. "%"
+    sb.Font = Enum.Font.GothamBold
+    sb.TextSize = 12
+    sb.ZIndex = 6
+    sb.Parent = ScaleCard
+    RegisterText(sb, false)
+    local sbc = Instance.new("UICorner")
+    sbc.CornerRadius = UDim.new(0, 8)
+    sbc.Parent = sb
+    ScaleBtns[sc] = sb
+
+    sb.MouseButton1Click:Connect(function()
+        PlaySFX("Click")
+        Config.UIScale = sc
+        TweenService:Create(UIScaleObj, TweenInfo.new(0.25, Enum.EasingStyle.Back), {Scale = sc}):Play()
+        for val, b in pairs(ScaleBtns) do
+            b.BackgroundColor3 = (val == sc) and Theme.Accent or Theme.ButtonSolid
+        end
+        SaveConfig()
+    end)
+end
+
+--====================================================================
+--   PAGE 4: UTILITIES
+--====================================================================
+local function CreateToggleRow(parent, labelText, defaultState, callback)
+    local card = MakeCard(parent, 46)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(0.7, 0, 1, 0)
+    lbl.Position = UDim2.fromOffset(14, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = labelText
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 12
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.ZIndex = 6
+    lbl.Parent = card
+    RegisterText(lbl, false)
+
+    local state = defaultState
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.fromOffset(64, 26)
+    btn.Position = UDim2.new(1, -76, 0.5, -13)
+    btn.BackgroundColor3 = state and Theme.Accent or Theme.ButtonSolid
+    btn.Text = state and "ON" or "OFF"
+    btn.Font = Enum.Font.GothamBlack
+    btn.TextSize = 11
+    btn.ZIndex = 6
+    btn.Parent = card
+    RegisterText(btn, false)
+    local bc = Instance.new("UICorner")
+    bc.CornerRadius = UDim.new(0, 7)
+    bc.Parent = btn
+
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        PlaySFX("Toggle")
+        btn.BackgroundColor3 = state and Theme.Accent or Theme.ButtonSolid
+        btn.Text = state and "ON" or "OFF"
+        callback(state)
+        SaveConfig()
+    end)
+    return card
+end
+
+CreateToggleRow(PageTools, "🔊 UI Sound Effects", Config.SoundEnabled, function(v)
+    Config.SoundEnabled = v
+end)
+
+CreateToggleRow(PageTools, "🔄 Auto-Rejoin on Error Prompt", Config.AutoRejoin, function(v)
+    Config.AutoRejoin = v
+    Notify("Auto-Rejoin", v and "Enabled" or "Disabled")
+end)
+
+CreateToggleRow(PageTools, "🥔 FPS Boost / Potato Mode", Config.PotatoMode, function(v)
+    Config.PotatoMode = v
+    if v then
+        Lighting.GlobalShadows = false
+        Lighting.Brightness = 2
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") then obj.Material = Enum.Material.SmoothPlastic end
+        end
+        Notify("Potato Mode", "Graphics optimized for overnight AFK")
+    else
+        Lighting.GlobalShadows = true
+        Notify("Potato Mode", "Restored normal graphics")
+    end
+end)
+
+local StatsWatcherCard = MakeCard(PageTools, 75)
+local SWTitle = Instance.new("TextLabel")
+SWTitle.Size = UDim2.new(1, -24, 0, 22)
+SWTitle.Position = UDim2.fromOffset(14, 10)
+SWTitle.BackgroundTransparency = 1
+SWTitle.Text = "📈 Connection Health Watcher"
+SWTitle.Font = Enum.Font.GothamBold
+SWTitle.TextSize = 13
+SWTitle.TextXAlignment = Enum.TextXAlignment.Left
+SWTitle.ZIndex = 6
+SWTitle.Parent = StatsWatcherCard
+RegisterText(SWTitle, false)
+
+local SWValue = Instance.new("TextLabel")
+SWValue.Size = UDim2.new(1, -24, 0, 28)
+SWValue.Position = UDim2.fromOffset(14, 34)
+SWValue.BackgroundTransparency = 1
+SWValue.Text = "Peak Ping: 0ms • Lowest FPS: 60"
+SWValue.Font = Enum.Font.GothamSemibold
+SWValue.TextSize = 11
+SWValue.TextXAlignment = Enum.TextXAlignment.Left
+SWValue.ZIndex = 6
+SWValue.Parent = StatsWatcherCard
+RegisterText(SWValue, true)
+table.insert(ThemedAccents, SWValue)
+
+local SoundProfileCard = MakeCard(PageTools, 85)
+local SPTitle = Instance.new("TextLabel")
+SPTitle.Size = UDim2.new(1, -24, 0, 22)
+SPTitle.Position = UDim2.fromOffset(14, 10)
+SPTitle.BackgroundTransparency = 1
+SPTitle.Text = "🎵 UI Sound Profile"
+SPTitle.Font = Enum.Font.GothamBold
+SPTitle.TextSize = 13
+SPTitle.TextXAlignment = Enum.TextXAlignment.Left
+SPTitle.ZIndex = 6
+SPTitle.Parent = SoundProfileCard
+RegisterText(SPTitle, false)
+
+local Profiles = {"Default", "Bubble", "Cozy Chime"}
+local ProfileBtns = {}
+for i, pName in ipairs(Profiles) do
+    local pb = Instance.new("TextButton")
+    pb.Size = UDim2.new(0.3, 0, 0, 34)
+    pb.Position = UDim2.new(0.03 + (i - 1) * 0.32, 0, 0, 38)
+    pb.BackgroundColor3 = (Config.SoundProfile == pName) and Theme.Accent or Theme.ButtonSolid
+    pb.Text = pName
+    pb.Font = Enum.Font.GothamBold
+    pb.TextSize = 11
+    pb.ZIndex = 6
+    pb.Parent = SoundProfileCard
+    RegisterText(pb, false)
+    local pbc = Instance.new("UICorner")
+    pbc.CornerRadius = UDim.new(0, 8)
+    pbc.Parent = pb
+    ProfileBtns[pName] = pb
+
+    pb.MouseButton1Click:Connect(function()
+        Config.SoundProfile = pName
+        PlaySFX("Click")
+        for name, b in pairs(ProfileBtns) do
+            b.BackgroundColor3 = (name == pName) and Theme.Accent or Theme.ButtonSolid
+        end
+        Notify("Sound Profile", "Set to " .. pName)
+        SaveConfig()
+    end)
+end
+
+local VolCard = MakeCard(PageTools, 75)
+local VolTitle = Instance.new("TextLabel")
+VolTitle.Size = UDim2.new(1, -24, 0, 20)
+VolTitle.Position = UDim2.fromOffset(14, 10)
+VolTitle.BackgroundTransparency = 1
+VolTitle.Text = "🔊 Sound Volume (" .. math.floor(Config.SoundVolume * 100) .. "%)"
+VolTitle.Font = Enum.Font.GothamBold
+VolTitle.TextSize = 12
+VolTitle.TextXAlignment = Enum.TextXAlignment.Left
+VolTitle.ZIndex = 6
+VolTitle.Parent = VolCard
+RegisterText(VolTitle, false)
+
+local VolSliderBg = Instance.new("Frame")
+VolSliderBg.Size = UDim2.new(1, -28, 0, 10)
+VolSliderBg.Position = UDim2.fromOffset(14, 42)
+VolSliderBg.BackgroundColor3 = Theme.ButtonSolid
+VolSliderBg.ZIndex = 6
+VolSliderBg.Parent = VolCard
+local VSBGrid = Instance.new("UICorner")
+VSBGrid.CornerRadius = UDim.new(1, 0)
+VSBGrid.Parent = VolSliderBg
+
+local VolSliderFill = Instance.new("Frame")
+VolSliderFill.Size = UDim2.new(Config.SoundVolume, 0, 1, 0)
+VolSliderFill.BackgroundColor3 = Theme.Accent
+VolSliderFill.ZIndex = 7
+VolSliderFill.Parent = VolSliderBg
+local VSFGrid = Instance.new("UICorner")
+VSFGrid.CornerRadius = UDim.new(1, 0)
+VSFGrid.Parent = VolSliderFill
+
+local VolBtn = Instance.new("TextButton")
+VolBtn.Size = UDim2.new(1, 0, 1, 0)
+VolBtn.BackgroundTransparency = 1
+VolBtn.Text = ""
+VolBtn.ZIndex = 8
+VolBtn.Parent = VolSliderBg
+
+VolBtn.MouseButton1Down:Connect(function()
+    local mouseConn
+    mouseConn = RunService.RenderStepped:Connect(function()
+        if not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+            mouseConn:Disconnect()
+            SaveConfig()
+            return
+        end
+        local mPos = UserInputService:GetMouseLocation().X
+        local barPos = VolSliderBg.AbsolutePosition.X
+        local barSize = VolSliderBg.AbsoluteSize.X
+        local ratio = math.clamp((mPos - barPos) / barSize, 0, 1)
+        Config.SoundVolume = ratio
+        VolSliderFill.Size = UDim2.new(ratio, 0, 1, 0)
+        VolTitle.Text = "🔊 Sound Volume (" .. math.floor(ratio * 100) .. "%)"
+    end)
+end)
+
+local StatusInputCard = MakeCard(PageTools, 85)
+local SITitle = Instance.new("TextLabel")
+SITitle.Size = UDim2.new(1, -24, 0, 22)
+SITitle.Position = UDim2.fromOffset(14, 10)
+SITitle.BackgroundTransparency = 1
+SITitle.Text = "✍️ Custom Status Message"
+SITitle.Font = Enum.Font.GothamBold
+SITitle.TextSize = 13
+SITitle.TextXAlignment = Enum.TextXAlignment.Left
+SITitle.ZIndex = 6
+SITitle.Parent = StatusInputCard
+RegisterText(SITitle, false)
+
+local StatusTextBox = Instance.new("TextBox")
+StatusTextBox.Size = UDim2.new(1, -28, 0, 36)
+StatusTextBox.Position = UDim2.fromOffset(14, 38)
+StatusTextBox.BackgroundColor3 = Theme.ButtonSolid
+StatusTextBox.Text = Config.CustomStatusText
+StatusTextBox.PlaceholderText = "Type custom status..."
+StatusTextBox.Font = Enum.Font.GothamSemibold
+StatusTextBox.TextSize = 12
+StatusTextBox.ClearTextOnFocus = false
+StatusTextBox.ZIndex = 6
+StatusTextBox.Parent = StatusInputCard
+RegisterText(StatusTextBox, false)
+local STC = Instance.new("UICorner")
+STC.CornerRadius = UDim.new(0, 8)
+STC.Parent = StatusTextBox
+
+StatusTextBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed and StatusTextBox.Text ~= "" then
+        Config.CustomStatusText = StatusTextBox.Text
+        StatusText.Text = Config.CustomStatusText
+        Notify("Status Updated", "Set to: " .. Config.CustomStatusText)
+        SaveConfig()
+    end
+end)
+
+local ActionCard = MakeCard(PageTools, 54)
+local KeybindBtn = Instance.new("TextButton")
+KeybindBtn.Size = UDim2.new(0.46, 0, 0, 32)
+KeybindBtn.Position = UDim2.new(0.03, 0, 0.5, -16)
+KeybindBtn.BackgroundColor3 = Theme.ButtonSolid
+KeybindBtn.Text = "⌨️ Key: RightShift"
+KeybindBtn.Font = Enum.Font.GothamBold
+KeybindBtn.TextSize = 11
+KeybindBtn.ZIndex = 6
+KeybindBtn.Parent = ActionCard
+RegisterText(KeybindBtn, false)
+local KBC = Instance.new("UICorner")
+KBC.CornerRadius = UDim.new(0, 8)
+KBC.Parent = KeybindBtn
+
+local BindingKey = false
+KeybindBtn.MouseButton1Click:Connect(function()
+    PlaySFX("Click")
+    BindingKey = true
+    KeybindBtn.Text = "Press any key..."
+end)
+
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if BindingKey and input.UserInputType == Enum.UserInputType.Keyboard then
+        BindingKey = false
+        Config.Keybind = input.KeyCode
+        KeybindBtn.Text = "⌨️ Key: " .. input.KeyCode.Name
+        Notify("Keybind Changed", "Toggle key set to " .. input.KeyCode.Name)
+        SaveConfig()
+    elseif not gpe and input.KeyCode == Config.Keybind then
+        Config.Open = not Config.Open
+        if Config.Open then
+            MiniWidget.Visible = false
+            Main.Visible = true
+        else
+            Main.Visible = false
+            MiniWidget.Visible = true
+        end
+        PlaySFX("Click")
+    end
+end)
+
+local RejoinBtn = Instance.new("TextButton")
+RejoinBtn.Size = UDim2.new(0.46, 0, 0, 32)
+RejoinBtn.Position = UDim2.new(0.51, 0, 0.5, -16)
+RejoinBtn.BackgroundColor3 = Theme.Accent
+RejoinBtn.Text = "🌐 Rejoin Server"
+RejoinBtn.Font = Enum.Font.GothamBlack
+RejoinBtn.TextSize = 11
+RejoinBtn.ZIndex = 6
+RejoinBtn.Parent = ActionCard
+RegisterText(RejoinBtn, true)
+local RJC = Instance.new("UICorner")
+RJC.CornerRadius = UDim.new(0, 8)
+RJC.Parent = RejoinBtn
+
+RejoinBtn.MouseButton1Click:Connect(function()
+    PlaySFX("Click")
+    Notify("Rejoining...", "Teleporting back to server")
+    task.wait(0.6)
+    TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, Player)
+end)
+
+--====================================================================
+--   PAGE 5: MINI-GAME (VIRTUAL COZY PET)
+--====================================================================
+local PetCard = MakeCard(PageGame, 185)
+local PetTitle = Instance.new("TextLabel")
+PetTitle.Size = UDim2.new(1, -24, 0, 22)
+PetTitle.Position = UDim2.fromOffset(14, 12)
+PetTitle.BackgroundTransparency = 1
+PetTitle.Text = "🐾 Virtual Idle Pet: Mochi the Cat"
+PetTitle.Font = Enum.Font.GothamBlack
+PetTitle.TextSize = 14
+PetTitle.TextXAlignment = Enum.TextXAlignment.Left
+PetTitle.ZIndex = 6
+PetTitle.Parent = PetCard
+RegisterText(PetTitle, true)
+
+local PetStatusLabel = Instance.new("TextLabel")
+PetStatusLabel.Size = UDim2.new(1, -28, 0, 60)
+PetStatusLabel.Position = UDim2.fromOffset(14, 40)
+PetStatusLabel.BackgroundTransparency = 1
+PetStatusLabel.Text = "Level 1 • Happiness: 50% / 100%\nStatus: Sleeping peacefully while you AFK..."
+PetStatusLabel.Font = Enum.Font.Gotham
+PetStatusLabel.TextSize = 12
+PetStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+PetStatusLabel.TextYAlignment = Enum.TextYAlignment.Top
+PetStatusLabel.ZIndex = 6
+PetStatusLabel.Parent = PetCard
+RegisterText(PetStatusLabel, false)
+
+local FeedPetBtn = Instance.new("TextButton")
+FeedPetBtn.Size = UDim2.new(1, -28, 0, 36)
+FeedPetBtn.Position = UDim2.fromOffset(14, 125)
+FeedPetBtn.BackgroundColor3 = Theme.Accent
+FeedPetBtn.Text = "🍗 Give Cozy Treat (+20 Happiness)"
+FeedPetBtn.Font = Enum.Font.GothamBlack
+FeedPetBtn.TextSize = 12
+FeedPetBtn.ZIndex = 6
+FeedPetBtn.Parent = PetCard
+RegisterText(FeedPetBtn, true)
+local FPCorner = Instance.new("UICorner")
+FPCorner.CornerRadius = UDim.new(0, 8)
+FPCorner.Parent = FeedPetBtn
+
+FeedPetBtn.MouseButton1Click:Connect(function()
+    PlaySFX("Click")
+    Session.PetHappiness = math.clamp(Session.PetHappiness + 20, 0, 100)
+    Session.PetExp = Session.PetExp + 10
+    if Session.PetExp >= 50 then
+        Session.PetLevel = Session.PetLevel + 1
+        Session.PetExp = 0
+        Notify("🎉 Pet Level Up!", "Mochi reached Level " .. Session.PetLevel)
+    else
+        Notify("Mochi purrs!", "Happiness increased!")
+    end
+    PetStatusLabel.Text = string.format("Level %d • Happiness: %d%% / 100%%\nStatus: Happy and well-fed!", Session.PetLevel, Session.PetHappiness)
+end)
+
+--====================================================================
+--   PAGE 6: WEBHOOK INTEGRATION
+--====================================================================
+local WebhookToggleCard = MakeCard(PageWebhook, 46)
+local WHLbl = Instance.new("TextLabel")
+WHLbl.Size = UDim2.new(0.7, 0, 1, 0)
+WHLbl.Position = UDim2.fromOffset(14, 0)
+WHLbl.BackgroundTransparency = 1
+WHLbl.Text = "🌐 Discord Webhook Alerts"
+WHLbl.Font = Enum.Font.GothamBold
+WHLbl.TextSize = 12
+WHLbl.TextXAlignment = Enum.TextXAlignment.Left
+WHLbl.ZIndex = 6
+WHLbl.Parent = WebhookToggleCard
+RegisterText(WHLbl, false)
+
+local WHToggleBtn = Instance.new("TextButton")
+WHToggleBtn.Size = UDim2.fromOffset(64, 26)
+WHToggleBtn.Position = UDim2.new(1, -76, 0.5, -13)
+WHToggleBtn.BackgroundColor3 = Config.WebhookEnabled and Theme.Accent or Theme.ButtonSolid
+WHToggleBtn.Text = Config.WebhookEnabled and "ON" or "OFF"
+WHToggleBtn.Font = Enum.Font.GothamBlack
+WHToggleBtn.TextSize = 11
+WHToggleBtn.ZIndex = 6
+WHToggleBtn.Parent = WebhookToggleCard
+RegisterText(WHToggleBtn, false)
+local WHTC = Instance.new("UICorner")
+WHTC.CornerRadius = UDim.new(0, 7)
+WHTC.Parent = WHToggleBtn
+
+WHToggleBtn.MouseButton1Click:Connect(function()
+    Config.WebhookEnabled = not Config.WebhookEnabled
+    PlaySFX("Toggle")
+    WHToggleBtn.BackgroundColor3 = Config.WebhookEnabled and Theme.Accent or Theme.ButtonSolid
+    WHToggleBtn.Text = Config.WebhookEnabled and "ON" or "OFF"
+    Notify("Webhook Alerts", Config.WebhookEnabled and "Enabled" or "Disabled")
+    SaveConfig()
+    if Config.WebhookEnabled then
+        SendWebhook("Webhook Connected", "Successfully linked Discord Webhook logging!")
+    end
+end)
+
+local WebhookInputCard = MakeCard(PageWebhook, 85)
+local WITitle = Instance.new("TextLabel")
+WITitle.Size = UDim2.new(1, -24, 0, 22)
+WITitle.Position = UDim2.fromOffset(14, 10)
+WITitle.BackgroundTransparency = 1
+WITitle.Text = "🔗 Webhook URL"
+WITitle.Font = Enum.Font.GothamBold
+WITitle.TextSize = 13
+WITitle.TextXAlignment = Enum.TextXAlignment.Left
+WITitle.ZIndex = 6
+WITitle.Parent = WebhookInputCard
+RegisterText(WITitle, false)
+
+local WebhookTextBox = Instance.new("TextBox")
+WebhookTextBox.Size = UDim2.new(1, -28, 0, 36)
+WebhookTextBox.Position = UDim2.fromOffset(14, 38)
+WebhookTextBox.BackgroundColor3 = Theme.ButtonSolid
+WebhookTextBox.Text = Config.WebhookUrl
+WebhookTextBox.PlaceholderText = "Paste Discord Webhook URL here..."
+WebhookTextBox.Font = Enum.Font.GothamSemibold
+WebhookTextBox.TextSize = 11
+WebhookTextBox.ClearTextOnFocus = false
+WebhookTextBox.ZIndex = 6
+WebhookTextBox.Parent = WebhookInputCard
+RegisterText(WebhookTextBox, false)
+local WBTC = Instance.new("UICorner")
+WBTC.CornerRadius = UDim.new(0, 8)
+WBTC.Parent = WebhookTextBox
+
+WebhookTextBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed and WebhookTextBox.Text ~= "" then
+        Config.WebhookUrl = WebhookTextBox.Text
+        Notify("Webhook Saved", "Discord webhook URL configured!")
+        SaveConfig()
+    end
+end)
+
+--====================================================================
+--   PAGE 7: NOTIFICATION HISTORY CENTER
+--====================================================================
+local HistoryCard = MakeCard(PageHistory, 220)
+local HistoryTitle = Instance.new("TextLabel")
+HistoryTitle.Size = UDim2.new(1, -24, 0, 22)
+HistoryTitle.Position = UDim2.fromOffset(14, 10)
+HistoryTitle.BackgroundTransparency = 1
+HistoryTitle.Text = "📋 Session Notification Log"
+HistoryTitle.Font = Enum.Font.GothamBold
+HistoryTitle.TextSize = 13
+HistoryTitle.TextXAlignment = Enum.TextXAlignment.Left
+HistoryTitle.ZIndex = 6
+HistoryTitle.Parent = HistoryCard
+RegisterText(HistoryTitle, false)
+
+local HistoryScroll = Instance.new("ScrollingFrame")
+HistoryScroll.Size = UDim2.new(1, -28, 1, -45)
+HistoryScroll.Position = UDim2.fromOffset(14, 36)
+HistoryScroll.BackgroundTransparency = 1
+HistoryScroll.BorderSizePixel = 0
+HistoryScroll.ScrollBarThickness = 2
+HistoryScroll.ScrollBarImageColor3 = Theme.Accent
+HistoryScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+HistoryScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+HistoryScroll.ZIndex = 6
+HistoryScroll.Parent = HistoryCard
+
+local HistoryList = Instance.new("UIListLayout")
+HistoryList.Padding = UDim.new(0, 6)
+HistoryList.Parent = HistoryScroll
+
+task.spawn(function()
+    while Gui and Gui.Parent do
+        task.wait(2)
+        HistoryScroll.ClearAllChildren()
+        HistoryList.Parent = HistoryScroll
+        for _, log in ipairs(Session.NotificationLog) do
+            local lbl = Instance.new("TextLabel")
+            lbl.Size = UDim2.new(1, 0, 0, 32)
+            lbl.BackgroundColor3 = Theme.ButtonSolid
+            lbl.Text = " [" .. log.Time .. "] " .. log.Title .. ": " .. log.Text
+            lbl.Font = Enum.Font.Gotham
+            lbl.TextSize = 11
+            lbl.TextXAlignment = Enum.TextXAlignment.Left
+            lbl.Parent = HistoryScroll
+            RegisterText(lbl, false)
+            local lc = Instance.new("UICorner")
+            lc.CornerRadius = UDim.new(0, 6)
+            lc.Parent = lbl
+        end
+    end
+end)
+
+--====================================================================
+--   PAGE 8: CREDITS
+--====================================================================
+local CredCard = MakeCard(PageCreds, 195)
+local CHead = Instance.new("TextLabel")
+CHead.Size = UDim2.new(1, -28, 0, 26)
+CHead.Position = UDim2.fromOffset(14, 14)
+CHead.BackgroundTransparency = 1
+CHead.Text = "🐾 Paw-Luxe Anti-AFK Suite v9.1"
+CHead.Font = Enum.Font.GothamBlack
+CHead.TextSize = 16
+CHead.TextXAlignment = Enum.TextXAlignment.Left
+CHead.ZIndex = 6
+CHead.Parent = CredCard
+RegisterText(CHead, true)
+
+local CBody = Instance.new("TextLabel")
+CBody.Size = UDim2.new(1, -28, 0, 145)
+CBody.Position = UDim2.fromOffset(14, 46)
+CBody.BackgroundTransparency = 1
+CBody.Text = "Created with ♥ and paws by You!\n\n• Adjustable Text Lightness Slider\n• AFK Webhook Hourly Statistics Digest\n• Custom Wallpaper / Background Image Overlay\n• Connection Health Watcher & Auto-Rejoin\n\n✨ Developed with assistance from AI (Gemini)."
+CBody.Font = Enum.Font.Gotham
+CBody.TextSize = 11
+CBody.TextXAlignment = Enum.TextXAlignment.Left
+CBody.TextYAlignment = Enum.TextYAlignment.Top
+CBody.ZIndex = 6
+CBody.Parent = CredCard
+RegisterText(CBody, false)
+
+--====================================================================
+--   WINDOW VISIBILITY & WIDGET TOGGLE LOGIC
+--====================================================================
+local function ToggleWindow(state)
+    Config.Open = state
+    PlaySFX("Click")
+    if Config.Open then
+        MiniWidget.Visible = false
+        Main.Visible = true
+        UIScaleObj.Scale = Config.UIScale * 0.9
+        TweenService:Create(UIScaleObj, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = Config.UIScale}):Play()
+    else
+        Main.Visible = false
+        MiniWidget.Visible = true
+    end
+end
+
+CloseBtn.MouseButton1Click:Connect(function()
+    ToggleWindow(false)
+    Notify("Mini Widget Mode", "Click widget or press " .. Config.Keybind.Name .. " to reopen")
+end)
+
+MiniWidget.MouseButton1Click:Connect(function()
+    ToggleWindow(true)
+end)
+
+local function SwitchTab(tabName)
+    PlaySFX("Click")
+    Session.CurrentTab = tabName
+    for name, page in pairs(Pages) do page.Visible = (name == tabName) end
+    for name, tabData in pairs(Tabs) do
+        local active = (name == tabName)
+        TweenService:Create(tabData.Button, TweenInfo.new(0.2), {
+            BackgroundTransparency = active and 0 or 1
+        }):Play()
+    end
+end
+
+for name, tabData in pairs(Tabs) do
+    tabData.Button.MouseButton1Click:Connect(function() SwitchTab(name) end)
+end
+
+SwitchTab("Dashboard")
+
+ApplyTheme = function(newTheme)
+    Theme = newTheme
+    Main.BackgroundColor3 = Theme.BgPrimary
+    MainStroke.Color = Theme.Secondary
+    MainGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Theme.Grad1),
+        ColorSequenceKeypoint.new(1, Theme.Grad2)
+    })
+    Sidebar.BackgroundColor3 = Theme.BgSecondary
+    SideLine.BackgroundColor3 = Theme.Secondary
+    TopBar.BackgroundColor3 = Theme.Card
+    CloseBtn.BackgroundColor3 = Theme.ButtonSolid
+    CBS.Color = Theme.Accent
+    MiniWidget.BackgroundColor3 = Theme.BgSecondary
+    MWStroke.Color = Theme.Accent
+
+    for _, card in ipairs(ThemedCards) do card.BackgroundColor3 = Theme.Card end
+    for _, strk in ipairs(ThemedStrokes) do strk.Color = Theme.Secondary end
+    for _, info in ipairs(ThemeBtnsList) do
+        info.Button.BackgroundColor3 = info.ThemeRef.ButtonSolid
+        info.Stroke.Color = info.ThemeRef.Accent
+    end
+
+    if Config.Enabled then MainToggleBtn.BackgroundColor3 = Theme.Accent end
+    UpdateAllTextLightness()
+    SwitchTab(Session.CurrentTab)
+end
+
+--====================================================================
+--   ENGINE & PULSE LOOP
+--====================================================================
+local function ExecuteAntiAFKPulse()
+    Session.PulsesBlocked = Session.PulsesBlocked + 1
+
+    if Config.Method == "Virtual Click" then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new(0, 0))
+    elseif Config.Method == "Camera Nudge" then
+        local cam = workspace.CurrentCamera
+        if cam then
+            cam.CFrame = cam.CFrame * CFrame.Angles(0, math.rad(2), 0)
+            task.wait(0.05)
+            cam.CFrame = cam.CFrame * CFrame.Angles(0, math.rad(-2), 0)
+        end
+    elseif Config.Method == "Micro Hop" then
+        local char = Player.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+    end
+end
+
+MainToggleBtn.MouseButton1Click:Connect(function()
+    Config.Enabled = not Config.Enabled
+    PlaySFX("Toggle")
+
+    if Config.Enabled then
+        if Session.LastPauseTime then
+            Session.PausedAccumulated = Session.PausedAccumulated + (tick() - Session.LastPauseTime)
+            Session.LastPauseTime = nil
+        end
+        MainToggleBtn.Text = "🐾   Anti-AFK: ENABLED"
+        MainToggleBtn.BackgroundColor3 = Theme.Accent
+        StatusText.Text = Config.CustomStatusText
+        StatusText.TextColor3 = Color3.fromRGB(100, 240, 165)
+        StatusDot.BackgroundColor3 = Color3.fromRGB(100, 240, 165)
+        Notify("Anti-AFK Enabled", "You are safe from idle kicks 🐾")
+        SendWebhook("Status Update", "Anti-AFK Protection was **Enabled**.")
+    else
+        Session.LastPauseTime = tick()
+        MainToggleBtn.Text = "💤   Anti-AFK: PAUSED"
+        MainToggleBtn.BackgroundColor3 = Color3.fromRGB(150, 45, 75)
+        StatusText.Text = "PROTECTION PAUSED"
+        StatusText.TextColor3 = Color3.fromRGB(255, 105, 130)
+        StatusDot.BackgroundColor3 = Color3.fromRGB(255, 105, 130)
+        Notify("Anti-AFK Paused", "Idle protection temporarily off")
+        SendWebhook("Status Update", "Anti-AFK Protection was **Paused**.")
+    end
+    SaveConfig()
+end)
+
+TestPulseBtn.MouseButton1Click:Connect(function()
+    PlaySFX("Click")
+    ExecuteAntiAFKPulse()
+    Notify("Test Pulse Sent", "Triggered " .. Config.Method)
+end)
+
+local IdleConn = Player.Idled:Connect(function()
+    if Config.Enabled then ExecuteAntiAFKPulse() end
+end)
+
+task.spawn(function()
+    while Gui and Gui.Parent do
+        task.wait(1)
+        if Config.Enabled then
+            local activeSeconds = math.floor(tick() - Session.StartTime - Session.PausedAccumulated)
+            if activeSeconds > 0 and (activeSeconds % Config.Interval == 0) then
+                ExecuteAntiAFKPulse()
+            end
+            if activeSeconds == (Config.AfkAlarmHours * 3600) then
+                PlaySFX("Alarm")
+                Notify("AFK Milestone", "You have been active for " .. Config.AfkAlarmHours .. " hours!")
+            end
+
+            if tick() - Session.LastHourlyDigest >= 3600 then
+                Session.LastHourlyDigest = tick()
+                local earnings = math.floor((activeSeconds / 60) * Config.EarningsRate)
+                SendWebhook("📊 Hourly AFK Digest", string.format("• **Time AFK:** %ds\n• **Pulses Triggered:** %d\n• **Simulated Earnings:** $%d", activeSeconds, Session.PulsesBlocked, earnings))
+            end
+        end
+    end
+end)
+
+local ErrorConn = game:GetService("CoreGui").RobloxPromptGui.promptOverlay.ChildAdded:Connect(function(child)
+    if Config.AutoRejoin and child.Name == "ErrorPrompt" then
+        SendWebhook("Rejoining Game", "An error prompt appeared. Auto-rejoining server...")
+        task.wait(2)
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, Player)
+    end
+end)
+
+local frameCount = 0
+local lastFpsUpdate = tick()
+local currentFps = 60
+
+local RenderConn = RunService.RenderStepped:Connect(function()
+    frameCount = frameCount + 1
+    if tick() - lastFpsUpdate >= 0.5 then
+        currentFps = math.floor(frameCount / (tick() - lastFpsUpdate))
+        frameCount = 0
+        lastFpsUpdate = tick()
+
+        if currentFps < Session.LowestFps then
+            Session.LowestFps = currentFps
+        end
+
+        local ping = 0
+        pcall(function() ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
+        if ping > Session.PeakPing then
+            Session.PeakPing = ping
+        end
+
+        PerfLabel.Text = string.format("FPS: %d  •  Ping: %dms  •  %s", currentFps, ping, Config.Keybind.Name)
+        SWValue.Text = string.format("Peak Ping: %dms  •  Lowest FPS: %d", Session.PeakPing, Session.LowestFps)
+    end
+
+    if Config.Enabled then
+        local elapsed = math.max(0, math.floor(tick() - Session.StartTime - Session.PausedAccumulated))
+        local hrs = math.floor(elapsed / 3600)
+        local mins = math.floor((elapsed % 3600) / 60)
+        local secs = elapsed % 60
+        local timeStr = string.format("%02d:%02d:%02d", hrs, mins, secs)
+        TimerValue.Text = timeStr
+
+        local estimatedEarnings = math.floor((elapsed / 60) * Config.EarningsRate)
+        EarningsValue.Text = "$" .. estimatedEarnings
+        MWLabel.Text = string.format("🐾 %s | $%d", timeStr, estimatedEarnings)
+    end
+end)
+
+SelfDestructBtn.MouseButton1Click:Connect(function()
+    Config.Enabled = false
+    if IdleConn then IdleConn:Disconnect() end
+    if RenderConn then RenderConn:Disconnect() end
+    if ErrorConn then ErrorConn:Disconnect() end
+
+    PlaySFX("Toggle")
+    SendWebhook("Self Destruct", "Paw-Luxe Anti-AFK suite was closed.")
+
+    local Blast = Instance.new("Frame")
+    Blast.Size = UDim2.fromOffset(10, 10)
+    Blast.Position = UDim2.new(0.5, 0, 0.5, 0)
+    Blast.AnchorPoint = Vector2.new(0.5, 0.5)
+    Blast.BackgroundColor3 = Theme.Accent
+    Blast.ZIndex = 50
+    Blast.Parent = Main
+
+    local BC = Instance.new("UICorner")
+    BC.CornerRadius = UDim.new(1, 0)
+    BC.Parent = Blast
+
+    local BS = Instance.new("UIStroke")
+    BS.Color = Color3.new(1, 1, 1)
+    BS.Thickness = 4
+    BS.Parent = Blast
+
+    local exp = TweenService:Create(Blast, TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {
+        Size = UDim2.fromOffset(650, 650),
+        BackgroundTransparency = 1
+    })
+    TweenService:Create(BS, TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {
+        Transparency = 1
+    }):Play()
+
+    exp:Play()
+    exp.Completed:Wait()
+    Gui:Destroy()
+end)
+
+Notify("Paw-Luxe Loaded", "Welcome back! Protection is active 🐾")
+SendWebhook("Session Started", "Paw-Luxe Anti-AFK Suite v9.1 initialized successfully.")

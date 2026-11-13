@@ -1,0 +1,16 @@
+# 🐾 Paw-Luxe Anti-AFK Suite v9.1 (God-Tier Edition)
+
+Welcome to **Paw-Luxe**, a feature-rich, highly polished, and aesthetic UI suite designed for Roblox. Say goodbye to idle kicks and hello to ultimate customization, virtual pets, connection tracking, and continuous automation!
+
+---
+
+## 🌟 Key Features
+
+*   **🛡️ Advanced Anti-AFK Protection:** Multiple simulation methods including *Virtual Click*, *Camera Nudge*, and *Micro Hop*.
+*   **🎨 Dynamic Themes & Custom Wallpaper:** Choose from multiple cozy color palettes and paste any Roblox Decal Asset ID to apply a custom background image overlay.
+*   **💡 Text Lightness Slider:** Seamlessly adjust the luminosity of all UI text elements in real-time to fit your preferred visual comfort.
+*   **🐾 Virtual Idle Pet:** Care for *Mochi the Cat*, feed treats, and level up your companion while staying AFK!
+*   **📊 Webhook Statistics Digest:** Periodically sends automated Discord webhook recaps detailing total time AFK, pulses triggered, and simulated earnings.
+*   **📈 Connection Health Watcher:** Tracks historical peak ping and lowest FPS to monitor connection health while you're away.
+*   **🔄 Auto-Execute on Rejoin:** Automatically re-injects and executes the script on teleports or server hops to guarantee 100% continuous uptime.
+*   **⚙️ Persistent Configurations:** Automatically saves your custom preferences and settings to your executor's workspace.
