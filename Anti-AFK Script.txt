@@ -54,7 +54,8 @@ local Config = {
     EarningsRate = 100, -- Earnings per minute
     WallpaperAsset = "",
     TextLightness = 1.0, -- Text brightness multiplier (0.5 to 1.5)
-    FirstTimeSeen = false
+    FirstTimeSeen = false,
+    TotalRuns = 0
 }
 
 local FileName = "PawLuxe_Config_v1_" .. Player.UserId .. ".json"
@@ -76,6 +77,9 @@ local function LoadConfig()
             end
         end)
     end
+    -- Increment run counter on load
+    Config.TotalRuns = (Config.TotalRuns or 0) + 1
+    SaveConfig()
 end
 LoadConfig()
 
@@ -781,6 +785,33 @@ EarningsValue.ZIndex = 6
 EarningsValue.Parent = StatBox2
 RegisterText(EarningsValue, true)
 table.insert(ThemedAccents, EarningsValue)
+
+-- Total Runs Stat Card
+local RunsCard = MakeCard(PageDash, 65)
+local RunsTitle = Instance.new("TextLabel")
+RunsTitle.Size = UDim2.new(1, -20, 0, 16)
+RunsTitle.Position = UDim2.fromOffset(12, 10)
+RunsTitle.BackgroundTransparency = 1
+RunsTitle.Text = "🚀 TOTAL SCRIPT EXECUTIONS"
+RunsTitle.Font = Enum.Font.GothamBold
+RunsTitle.TextSize = 10
+RunsTitle.TextXAlignment = Enum.TextXAlignment.Left
+RunsTitle.ZIndex = 6
+RunsTitle.Parent = RunsCard
+RegisterText(RunsTitle, false)
+
+local RunsValue = Instance.new("TextLabel")
+RunsValue.Size = UDim2.new(1, -20, 0, 24)
+RunsValue.Position = UDim2.fromOffset(12, 28)
+RunsValue.BackgroundTransparency = 1
+RunsValue.Text = tostring(Config.TotalRuns) .. " Times Run"
+RunsValue.Font = Enum.Font.GothamBlack
+RunsValue.TextSize = 15
+RunsValue.TextXAlignment = Enum.TextXAlignment.Left
+RunsValue.ZIndex = 6
+RunsValue.Parent = RunsCard
+RegisterText(RunsValue, true)
+table.insert(ThemedAccents, RunsValue)
 
 local QuickCard = MakeCard(PageDash, 54)
 local QLabel = Instance.new("TextLabel")
@@ -1908,7 +1939,7 @@ local RenderConn = RunService.RenderStepped:Connect(function()
         TimerValue.Text = timeStr
 
         local estimatedEarnings = math.floor((elapsed / 60) * Config.EarningsRate)
-        EarningsValue.Text = "$" + estimatedEarnings
+        EarningsValue.Text = "$" .. estimatedEarnings
         MWLabel.Text = string.format("🐾 %s | $%d", timeStr, estimatedEarnings)
     end
 end)
