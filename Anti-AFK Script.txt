@@ -368,7 +368,7 @@ end
 --   TWO SEPARATE TOP-MIDDLE FLOATING BARS (SIDE-BY-SIDE)
 --====================================================================
 
--- 1. Time Bar (Left side of top-middle, anchored at X: 0.5 with negative offset)
+-- 1. Time Bar (Left side of top-middle)
 local TimeWidget = Instance.new("Frame")
 TimeWidget.Name = "TimeWidget"
 TimeWidget.Size = UDim2.fromOffset(145, 42)
