@@ -396,7 +396,7 @@ TWLabel.ZIndex = 51
 TWLabel.Parent = TimeWidget
 RegisterText(TWLabel, false)
 
--- 2. Open Button Bar (Right side of top-middle, outline on the bar frame instead of text)
+-- 2. Open Button Bar (Right side of top-middle, plain white text with pink frame outline)
 local OpenWidget = Instance.new("TextButton")
 OpenWidget.Name = "OpenWidget"
 OpenWidget.Size = UDim2.fromOffset(95, 42)
@@ -406,10 +406,10 @@ OpenWidget.AutoButtonColor = false
 OpenWidget.Text = "Open"
 OpenWidget.Font = Enum.Font.GothamBold
 OpenWidget.TextSize = 13
+OpenWidget.TextColor3 = Color3.fromRGB(255, 255, 255) -- Plain white text, no text stroke/accent
 OpenWidget.Visible = not Config.Open
 OpenWidget.ZIndex = 50
 OpenWidget.Parent = Gui
-RegisterText(OpenWidget, false) -- Normal text color without text stroke/accent inversion
 
 local OWCorner = Instance.new("UICorner")
 OWCorner.CornerRadius = UDim.new(1, 0)
