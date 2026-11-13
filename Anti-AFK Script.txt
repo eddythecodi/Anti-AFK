@@ -370,7 +370,7 @@ end
 local MiniWidget = Instance.new("TextButton")
 MiniWidget.Name = "MiniWidget"
 MiniWidget.Size = UDim2.fromOffset(190, 42)
-MiniWidget.Position = UDim2.new(0.5, -95, 0, 20)
+MiniWidget.Position = UDim2.new(0, 20, 0, 20)
 MiniWidget.BackgroundColor3 = Theme.BgSecondary
 MiniWidget.AutoButtonColor = false
 MiniWidget.Visible = not Config.Open
