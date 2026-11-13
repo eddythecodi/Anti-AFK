@@ -1,5 +1,5 @@
 --====================================================================
---   🐾 ANTI-AFK | PAW-LUXE ULTIMATE SUITE v9.1 (GOD-TIER EDITION) 🐾
+--   🐾 ANTI-AFK | PAW-LUXE ULTIMATE SUITE v1 (GOD-TIER EDITION) 🐾
 --====================================================================
 
 local Players = game:GetService("Players")
@@ -22,7 +22,7 @@ pcall(function()
         queue_on_teleport(syn and syn.queue_on_teleport or queue_on_teleport, [[
             -- Paw-Luxe Auto-Reinject
             task.wait(3)
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/your-repo/paw-luxe/main/loader.lua"))()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/eddythecodi/Anti-AFK/main/Anti-AFK%20Script.txt"))()
         ]])
     end
 end)
@@ -53,7 +53,8 @@ local Config = {
     AntiModEnabled = false,
     EarningsRate = 100, -- Earnings per minute
     WallpaperAsset = "",
-    TextLightness = 1.0 -- Text brightness multiplier (0.5 to 1.5)
+    TextLightness = 1.0, -- Text brightness multiplier (0.5 to 1.5)
+    FirstTimeSeen = false
 }
 
 local FileName = "PawLuxe_Config_v9_" .. Player.UserId .. ".json"
@@ -461,7 +462,7 @@ BrandBadge.Size = UDim2.fromOffset(76, 16)
 BrandBadge.Position = UDim2.fromOffset(52, 37)
 BrandBadge.BackgroundColor3 = Theme.Accent
 BrandBadge.BackgroundTransparency = 0.7
-BrandBadge.Text = "GOD-TIER v9.1"
+BrandBadge.Text = "GOD-TIER v1"
 BrandBadge.Font = Enum.Font.GothamBold
 BrandBadge.TextSize = 9
 BrandBadge.ZIndex = 4
@@ -916,7 +917,7 @@ Players.PlayerAdded:Connect(function(newPlr)
 end)
 
 --====================================================================
---   PAGE 3: THEMES (WITH TEXT LIGHTNESS SLIDER & WALLPAPER)
+--   PAGE 3: THEMES
 --====================================================================
 local ThemeCard = MakeCard(PageVisuals, 145)
 local TTitle = Instance.new("TextLabel")
@@ -991,7 +992,7 @@ TLSBrd.CornerRadius = UDim.new(1, 0)
 TLSBrd.Parent = TLSliderBg
 
 local TLSliderFill = Instance.new("Frame")
-TLSliderFill.Size = UDim2.new((Config.TextLightness - 0.5) / 1.0, 0, 1, 0) -- Scaled 0.5 to 1.5 range
+TLSliderFill.Size = UDim2.new((Config.TextLightness - 0.5) / 1.0, 0, 1, 0)
 TLSliderFill.BackgroundColor3 = Theme.Accent
 TLSliderFill.ZIndex = 7
 TLSliderFill.Parent = TLSliderBg
@@ -1018,7 +1019,7 @@ TLBtn.MouseButton1Down:Connect(function()
         local barPos = TLSliderBg.AbsolutePosition.X
         local barSize = TLSliderBg.AbsoluteSize.X
         local ratio = math.clamp((mPos - barPos) / barSize, 0, 1)
-        Config.TextLightness = 0.5 + (ratio * 1.0) -- Range from 50% to 150%
+        Config.TextLightness = 0.5 + (ratio * 1.0)
         TLSliderFill.Size = UDim2.new(ratio, 0, 1, 0)
         TLTitle.Text = "💡 Text Lightness Level (" .. math.floor(Config.TextLightness * 100) .. "%)"
         UpdateAllTextLightness()
@@ -1599,7 +1600,7 @@ local CHead = Instance.new("TextLabel")
 CHead.Size = UDim2.new(1, -28, 0, 26)
 CHead.Position = UDim2.fromOffset(14, 14)
 CHead.BackgroundTransparency = 1
-CHead.Text = "🐾 Paw-Luxe Anti-AFK Suite v9.1"
+CHead.Text = "🐾 Paw-Luxe Anti-AFK Suite v9.2"
 CHead.Font = Enum.Font.GothamBlack
 CHead.TextSize = 16
 CHead.TextXAlignment = Enum.TextXAlignment.Left
@@ -1611,7 +1612,7 @@ local CBody = Instance.new("TextLabel")
 CBody.Size = UDim2.new(1, -28, 0, 145)
 CBody.Position = UDim2.fromOffset(14, 46)
 CBody.BackgroundTransparency = 1
-CBody.Text = "Created with ♥ and paws by You!\n\n• Adjustable Text Lightness Slider\n• AFK Webhook Hourly Statistics Digest\n• Custom Wallpaper / Background Image Overlay\n• Connection Health Watcher & Auto-Rejoin\n\n✨ Developed with assistance from AI (Gemini)."
+CBody.Text = "Created with ♥ and paws by You!\n\n• First-Time User Welcome Modal & Guide\n• Adjustable Text Lightness Slider\n• AFK Webhook Hourly Statistics Digest\n• Custom Wallpaper / Background Image Overlay\n• Connection Health Watcher & Auto-Rejoin\n\n✨ Developed with assistance from AI (Gemini)."
 CBody.Font = Enum.Font.Gotham
 CBody.TextSize = 11
 CBody.TextXAlignment = Enum.TextXAlignment.Left
@@ -1619,6 +1620,96 @@ CBody.TextYAlignment = Enum.TextYAlignment.Top
 CBody.ZIndex = 6
 CBody.Parent = CredCard
 RegisterText(CBody, false)
+
+--====================================================================
+--   FIRST-TIME WELCOME & TERMS POPUP MODAL
+--====================================================================
+if not Config.FirstTimeSeen then
+    Main.Visible = false -- Hide main UI until terms are accepted
+
+    local WelcomeOverlay = Instance.new("Frame")
+    WelcomeOverlay.Name = "WelcomeModal"
+    WelcomeOverlay.Size = UDim2.fromOffset(460, 310)
+    WelcomeOverlay.Position = UDim2.new(0.5, -230, 0.5, -155)
+    WelcomeOverlay.BackgroundColor3 = Theme.BgPrimary
+    WelcomeOverlay.BorderSizePixel = 0
+    WelcomeOverlay.ZIndex = 100
+    WelcomeOverlay.Parent = Gui
+
+    local WCorner = Instance.new("UICorner")
+    WCorner.CornerRadius = UDim.new(0, 16)
+    WCorner.Parent = WelcomeOverlay
+
+    local WStroke = Instance.new("UIStroke")
+    WStroke.Color = Theme.Accent
+    WStroke.Thickness = 2
+    WStroke.Parent = WelcomeOverlay
+
+    local WGrad = Instance.new("UIGradient")
+    WGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Theme.Grad1),
+        ColorSequenceKeypoint.new(1, Theme.Grad2)
+    })
+    WGrad.Rotation = 35
+    WGrad.Parent = WelcomeOverlay
+
+    local WTitle = Instance.new("TextLabel")
+    WTitle.Size = UDim2.new(1, -40, 0, 30)
+    WTitle.Position = UDim2.fromOffset(20, 16)
+    WTitle.BackgroundTransparency = 1
+    WTitle.Text = "🐾 Welcome to Paw-Luxe Anti-AFK!"
+    WTitle.TextColor3 = Theme.Accent
+    WTitle.Font = Enum.Font.GothamBlack
+    WTitle.TextSize = 16
+    WTitle.TextXAlignment = Enum.TextXAlignment.Left
+    WTitle.ZIndex = 101
+    WTitle.Parent = WelcomeOverlay
+
+    local WDesc = Instance.new("TextLabel")
+    WDesc.Size = UDim2.new(1, -40, 0, 170)
+    WDesc.Position = UDim2.fromOffset(20, 52)
+    WDesc.BackgroundTransparency = 1
+    WDesc.Text = "You are running Paw-Luxe for the first time!\n\nHere is what this script can do for you:\n• **Anti-AFK Protection:** Prevents idle kicks using clicks, camera nudges, or jumps.\n• **Virtual Pet Companion:** Feed and level up Mochi while you're away.\n• **Discord Webhook Digests:** Recaps your earnings and AFK duration hourly.\n• **Connection Health & Auto-Rejoin:** Tracks lag spikes and auto-recovers from errors.\n• **Fully Customizable:** Cozy themes, wallpaper overlays, and text brightness sliders.\n\nPlease click below to acknowledge and start your session!"
+    WDesc.TextColor3 = Theme.TextMain
+    WDesc.Font = Enum.Font.Gotham
+    WDesc.TextSize = 12
+    WDesc.TextXAlignment = Enum.TextXAlignment.Left
+    WDesc.TextYAlignment = Enum.TextYAlignment.Top
+    WDesc.ZIndex = 101
+    WDesc.Parent = WelcomeOverlay
+
+    local AgreeBtn = Instance.new("TextButton")
+    AgreeBtn.Size = UDim2.new(1, -40, 0, 42)
+    AgreeBtn.Position = UDim2.fromOffset(20, 238)
+    AgreeBtn.BackgroundColor3 = Theme.Accent
+    AgreeBtn.Text = "✨ I Understand & Agree to Continue"
+    AgreeBtn.TextColor3 = Color3.fromRGB(20, 12, 30)
+    AgreeBtn.Font = Enum.Font.GothamBlack
+    AgreeBtn.TextSize = 13
+    AgreeBtn.ZIndex = 101
+    AgreeBtn.Parent = WelcomeOverlay
+
+    local ABCorner = Instance.new("UICorner")
+    ABCorner.CornerRadius = UDim.new(0, 10)
+    ABCorner.Parent = AgreeBtn
+
+    AgreeBtn.MouseButton1Click:Connect(function()
+        PlaySFX("Click")
+        Config.FirstTimeSeen = true
+        SaveConfig()
+        
+        -- Fade out welcome modal and show main UI
+        TweenService:Create(WelcomeOverlay, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.fromOffset(0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
+        task.wait(0.3)
+        WelcomeOverlay:Destroy()
+        Main.Visible = true
+        Notify("Paw-Luxe Loaded", "Welcome back! Protection is active 🐾")
+        SendWebhook("Session Started", "Paw-Luxe Anti-AFK Suite v9.2 initialized successfully.")
+    end)
+else
+    Notify("Paw-Luxe Loaded", "Welcome back! Protection is active 🐾")
+    SendWebhook("Session Started", "Paw-Luxe Anti-AFK Suite v9.2 initialized successfully.")
+end
 
 --====================================================================
 --   WINDOW VISIBILITY & WIDGET TOGGLE LOGIC
@@ -1739,128 +1830,4 @@ MainToggleBtn.MouseButton1Click:Connect(function()
         StatusText.TextColor3 = Color3.fromRGB(255, 105, 130)
         StatusDot.BackgroundColor3 = Color3.fromRGB(255, 105, 130)
         Notify("Anti-AFK Paused", "Idle protection temporarily off")
-        SendWebhook("Status Update", "Anti-AFK Protection was **Paused**.")
-    end
-    SaveConfig()
-end)
-
-TestPulseBtn.MouseButton1Click:Connect(function()
-    PlaySFX("Click")
-    ExecuteAntiAFKPulse()
-    Notify("Test Pulse Sent", "Triggered " .. Config.Method)
-end)
-
-local IdleConn = Player.Idled:Connect(function()
-    if Config.Enabled then ExecuteAntiAFKPulse() end
-end)
-
-task.spawn(function()
-    while Gui and Gui.Parent do
-        task.wait(1)
-        if Config.Enabled then
-            local activeSeconds = math.floor(tick() - Session.StartTime - Session.PausedAccumulated)
-            if activeSeconds > 0 and (activeSeconds % Config.Interval == 0) then
-                ExecuteAntiAFKPulse()
-            end
-            if activeSeconds == (Config.AfkAlarmHours * 3600) then
-                PlaySFX("Alarm")
-                Notify("AFK Milestone", "You have been active for " .. Config.AfkAlarmHours .. " hours!")
-            end
-
-            if tick() - Session.LastHourlyDigest >= 3600 then
-                Session.LastHourlyDigest = tick()
-                local earnings = math.floor((activeSeconds / 60) * Config.EarningsRate)
-                SendWebhook("📊 Hourly AFK Digest", string.format("• **Time AFK:** %ds\n• **Pulses Triggered:** %d\n• **Simulated Earnings:** $%d", activeSeconds, Session.PulsesBlocked, earnings))
-            end
-        end
-    end
-end)
-
-local ErrorConn = game:GetService("CoreGui").RobloxPromptGui.promptOverlay.ChildAdded:Connect(function(child)
-    if Config.AutoRejoin and child.Name == "ErrorPrompt" then
-        SendWebhook("Rejoining Game", "An error prompt appeared. Auto-rejoining server...")
-        task.wait(2)
-        TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, Player)
-    end
-end)
-
-local frameCount = 0
-local lastFpsUpdate = tick()
-local currentFps = 60
-
-local RenderConn = RunService.RenderStepped:Connect(function()
-    frameCount = frameCount + 1
-    if tick() - lastFpsUpdate >= 0.5 then
-        currentFps = math.floor(frameCount / (tick() - lastFpsUpdate))
-        frameCount = 0
-        lastFpsUpdate = tick()
-
-        if currentFps < Session.LowestFps then
-            Session.LowestFps = currentFps
-        end
-
-        local ping = 0
-        pcall(function() ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
-        if ping > Session.PeakPing then
-            Session.PeakPing = ping
-        end
-
-        PerfLabel.Text = string.format("FPS: %d  •  Ping: %dms  •  %s", currentFps, ping, Config.Keybind.Name)
-        SWValue.Text = string.format("Peak Ping: %dms  •  Lowest FPS: %d", Session.PeakPing, Session.LowestFps)
-    end
-
-    if Config.Enabled then
-        local elapsed = math.max(0, math.floor(tick() - Session.StartTime - Session.PausedAccumulated))
-        local hrs = math.floor(elapsed / 3600)
-        local mins = math.floor((elapsed % 3600) / 60)
-        local secs = elapsed % 60
-        local timeStr = string.format("%02d:%02d:%02d", hrs, mins, secs)
-        TimerValue.Text = timeStr
-
-        local estimatedEarnings = math.floor((elapsed / 60) * Config.EarningsRate)
-        EarningsValue.Text = "$" .. estimatedEarnings
-        MWLabel.Text = string.format("🐾 %s | $%d", timeStr, estimatedEarnings)
-    end
-end)
-
-SelfDestructBtn.MouseButton1Click:Connect(function()
-    Config.Enabled = false
-    if IdleConn then IdleConn:Disconnect() end
-    if RenderConn then RenderConn:Disconnect() end
-    if ErrorConn then ErrorConn:Disconnect() end
-
-    PlaySFX("Toggle")
-    SendWebhook("Self Destruct", "Paw-Luxe Anti-AFK suite was closed.")
-
-    local Blast = Instance.new("Frame")
-    Blast.Size = UDim2.fromOffset(10, 10)
-    Blast.Position = UDim2.new(0.5, 0, 0.5, 0)
-    Blast.AnchorPoint = Vector2.new(0.5, 0.5)
-    Blast.BackgroundColor3 = Theme.Accent
-    Blast.ZIndex = 50
-    Blast.Parent = Main
-
-    local BC = Instance.new("UICorner")
-    BC.CornerRadius = UDim.new(1, 0)
-    BC.Parent = Blast
-
-    local BS = Instance.new("UIStroke")
-    BS.Color = Color3.new(1, 1, 1)
-    BS.Thickness = 4
-    BS.Parent = Blast
-
-    local exp = TweenService:Create(Blast, TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {
-        Size = UDim2.fromOffset(650, 650),
-        BackgroundTransparency = 1
-    })
-    TweenService:Create(BS, TweenInfo.new(0.4, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {
-        Transparency = 1
-    }):Play()
-
-    exp:Play()
-    exp.Completed:Wait()
-    Gui:Destroy()
-end)
-
-Notify("Paw-Luxe Loaded", "Welcome back! Protection is active 🐾")
-SendWebhook("Session Started", "Paw-Luxe Anti-AFK Suite v9.1 initialized successfully.")
+        SendWebhook("Status Update", "Anti-AF
