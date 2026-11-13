@@ -365,14 +365,14 @@ local function UpdateAllTextLightness()
 end
 
 --====================================================================
---   TWO SEPARATE MINI BARS (TIME BAR & OPEN BUTTON)
+--   TWO SEPARATE TOP-MIDDLE FLOATING BARS (SIDE-BY-SIDE)
 --====================================================================
 
--- 1. Time Bar (Left side) - Shows active time
+-- 1. Time Bar (Left side of top-middle, anchored at X: 0.5 with negative offset)
 local TimeWidget = Instance.new("Frame")
 TimeWidget.Name = "TimeWidget"
-TimeWidget.Size = UDim2.fromOffset(150, 42)
-TimeWidget.Position = UDim2.new(0, 20, 0, 20)
+TimeWidget.Size = UDim2.fromOffset(145, 42)
+TimeWidget.Position = UDim2.new(0.5, -152, 0, 15)
 TimeWidget.BackgroundColor3 = Theme.BgSecondary
 TimeWidget.Visible = not Config.Open
 TimeWidget.ZIndex = 50
@@ -397,11 +397,11 @@ TWLabel.ZIndex = 51
 TWLabel.Parent = TimeWidget
 RegisterText(TWLabel, false)
 
--- 2. Open Button Bar (Right side) - Clicks to open main GUI
+-- 2. Open Button Bar (Right side of top-middle, side-by-side with TimeWidget)
 local OpenWidget = Instance.new("TextButton")
 OpenWidget.Name = "OpenWidget"
-OpenWidget.Size = UDim2.fromOffset(100, 42)
-OpenWidget.Position = UDim2.new(0, 180, 0, 20)
+OpenWidget.Size = UDim2.fromOffset(105, 42)
+OpenWidget.Position = UDim2.new(0.5, -2, 0, 15)
 OpenWidget.BackgroundColor3 = Theme.BgSecondary
 OpenWidget.AutoButtonColor = false
 OpenWidget.Visible = not Config.Open
