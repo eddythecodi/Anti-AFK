@@ -27,7 +27,7 @@ pcall(function()
     end
 end)
 
--- Cleanup existing instance
+-- Cleanup existing instance completely
 local Old = PlayerGui:FindFirstChild("PawLuxe_AntiAFK")
 if Old then Old:Destroy() end
 
@@ -396,7 +396,7 @@ TWLabel.ZIndex = 51
 TWLabel.Parent = TimeWidget
 RegisterText(TWLabel, false)
 
--- 2. Open Button Bar (Right side of top-middle, side-by-side with TimeWidget)
+-- 2. Open Button Bar (Right side of top-middle, strictly "Open" text with outline)
 local OpenWidget = Instance.new("TextButton")
 OpenWidget.Name = "OpenWidget"
 OpenWidget.Size = UDim2.fromOffset(95, 42)
@@ -1881,7 +1881,7 @@ task.spawn(function()
         if Config.Enabled then
             local activeSeconds = math.floor(tick() - Session.StartTime - Session.PausedAccumulated)
             if activeSeconds > 0 and (activeSeconds % Config.Interval == 0) then
-                ExecuteAntiAFKPulse()
+                ExecuteAntiAFKPussle()
             end
             if activeSeconds == (Config.AfkAlarmHours * 3600) then
                 PlaySFX("Alarm")
