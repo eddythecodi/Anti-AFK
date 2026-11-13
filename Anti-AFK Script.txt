@@ -1564,9 +1564,6 @@ HistoryScroll.ScrollBarImageColor3 = Theme.Accent
 HistoryScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 HistoryScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 HistoryScroll.ZIndex = 6
-HistoryScroll.Parent = HistoryScroll and HistoryScroll or HistoryCard -- safe fallback reference
-
--- Re-assign proper parent if needed
 HistoryScroll.Parent = HistoryCard
 
 local HistoryList = Instance.new("UIListLayout")
@@ -1911,7 +1908,7 @@ local RenderConn = RunService.RenderStepped:Connect(function()
         TimerValue.Text = timeStr
 
         local estimatedEarnings = math.floor((elapsed / 60) * Config.EarningsRate)
-        EarningsValue.Text = "$" .. estimatedEarnings
+        EarningsValue.Text = "$" + estimatedEarnings
         MWLabel.Text = string.format("🐾 %s | $%d", timeStr, estimatedEarnings)
     end
 end)
