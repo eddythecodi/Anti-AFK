@@ -51,7 +51,6 @@ local Config = {
     PotatoMode = false,
     AfkAlarmHours = 2,
     AntiModEnabled = false,
-    EarningsRate = 100, -- Earnings per minute
     WallpaperAsset = "",
     TextLightness = 1.0, -- Text brightness multiplier (0.5 to 1.5)
     FirstTimeSeen = false,
@@ -389,7 +388,7 @@ MWStroke.Parent = MiniWidget
 local MWLabel = Instance.new("TextLabel")
 MWLabel.Size = UDim2.new(1, 0, 1, 0)
 MWLabel.BackgroundTransparency = 1
-MWLabel.Text = "🐾 00:00:00 | $0"
+MWLabel.Text = "🐾 00:00:00"
 MWLabel.Font = Enum.Font.GothamBold
 MWLabel.TextSize = 11
 MWLabel.ZIndex = 51
@@ -730,8 +729,9 @@ StatsRow.BackgroundTransparency = 1
 StatsRow.ZIndex = 5
 StatsRow.Parent = PageDash
 
+-- Session Timer Stat Box (Full Width now since earnings is removed)
 local StatBox1 = MakeCard(StatsRow, 75)
-StatBox1.Size = UDim2.new(0.485, 0, 1, 0)
+StatBox1.Size = UDim2.new(1, 0, 1, 0)
 
 local S1Title = Instance.new("TextLabel")
 S1Title.Size = UDim2.new(1, -20, 0, 18)
@@ -755,36 +755,8 @@ TimerValue.TextSize = 20
 TimerValue.TextXAlignment = Enum.TextXAlignment.Left
 TimerValue.ZIndex = 6
 TimerValue.Parent = StatBox1
-RegisterText(TimerValue, false)
-
-local StatBox2 = MakeCard(StatsRow, 75)
-StatBox2.Size = UDim2.new(0.485, 0, 1, 0)
-StatBox2.Position = UDim2.new(0.515, 0, 0, 0)
-
-local S2Title = Instance.new("TextLabel")
-S2Title.Size = UDim2.new(1, -20, 0, 18)
-S2Title.Position = UDim2.fromOffset(12, 12)
-S2Title.BackgroundTransparency = 1
-S2Title.Text = "💰 ESTIMATED EARNINGS"
-S2Title.Font = Enum.Font.GothamBold
-S2Title.TextSize = 10
-S2Title.TextXAlignment = Enum.TextXAlignment.Left
-S2Title.ZIndex = 6
-S2Title.Parent = StatBox2
-RegisterText(S2Title, false)
-
-local EarningsValue = Instance.new("TextLabel")
-EarningsValue.Size = UDim2.new(1, -20, 0, 28)
-EarningsValue.Position = UDim2.fromOffset(12, 32)
-EarningsValue.BackgroundTransparency = 1
-EarningsValue.Text = "$0"
-EarningsValue.Font = Enum.Font.GothamBlack
-EarningsValue.TextSize = 20
-EarningsValue.TextXAlignment = Enum.TextXAlignment.Left
-EarningsValue.ZIndex = 6
-EarningsValue.Parent = StatBox2
-RegisterText(EarningsValue, true)
-table.insert(ThemedAccents, EarningsValue)
+RegisterText(TimerValue, true)
+table.insert(ThemedAccents, TimerValue)
 
 -- Total Runs Stat Card
 local RunsCard = MakeCard(PageDash, 65)
@@ -1700,7 +1672,7 @@ if not Config.FirstTimeSeen then
     WDesc.Size = UDim2.new(1, -40, 0, 170)
     WDesc.Position = UDim2.fromOffset(20, 52)
     WDesc.BackgroundTransparency = 1
-    WDesc.Text = "You are running Paw-Luxe for the first time!\n\nHere is what this script can do for you:\n• **Anti-AFK Protection:** Prevents idle kicks using clicks, camera nudges, or jumps.\n• **Virtual Pet Companion:** Feed and level up Mochi while you're away.\n• **Discord Webhook Digests:** Recaps your earnings and AFK duration hourly.\n• **Connection Health & Auto-Rejoin:** Tracks lag spikes and auto-recovers from errors.\n• **Fully Customizable:** Cozy themes, wallpaper overlays, and text brightness sliders.\n\nPlease click below to acknowledge and start your session!"
+    WDesc.Text = "You are running Paw-Luxe for the first time!\n\nHere is what this script can do for you:\n• **Anti-AFK Protection:** Prevents idle kicks using clicks, camera nudges, or jumps.\n• **Virtual Pet Companion:** Feed and level up Mochi while you're away.\n• **Discord Webhook Digests:** Recaps your AFK duration hourly.\n• **Connection Health & Auto-Rejoin:** Tracks lag spikes and auto-recovers from errors.\n• **Fully Customizable:** Cozy themes, wallpaper overlays, and text brightness sliders.\n\nPlease click below to acknowledge and start your session!"
     WDesc.TextColor3 = Theme.TextMain
     WDesc.Font = Enum.Font.Gotham
     WDesc.TextSize = 12
@@ -1890,8 +1862,7 @@ task.spawn(function()
 
             if tick() - Session.LastHourlyDigest >= 3600 then
                 Session.LastHourlyDigest = tick()
-                local earnings = math.floor((activeSeconds / 60) * Config.EarningsRate)
-                SendWebhook("📊 Hourly AFK Digest", string.format("• **Time AFK:** %ds\n• **Pulses Triggered:** %d\n• **Simulated Earnings:** $%d", activeSeconds, Session.PulsesBlocked, earnings))
+                SendWebhook("📊 Hourly AFK Digest", string.format("• **Time AFK:** %ds\n• **Pulses Triggered:** %d", activeSeconds, Session.PulsesBlocked))
             end
         end
     end
@@ -1937,10 +1908,7 @@ local RenderConn = RunService.RenderStepped:Connect(function()
         local secs = elapsed % 60
         local timeStr = string.format("%02d:%02d:%02d", hrs, mins, secs)
         TimerValue.Text = timeStr
-
-        local estimatedEarnings = math.floor((elapsed / 60) * Config.EarningsRate)
-        EarningsValue.Text = "$" .. estimatedEarnings
-        MWLabel.Text = string.format("🐾 %s | $%d", timeStr, estimatedEarnings)
+        MWLabel.Text = string.format("🐾 %s", timeStr)
     end
 end)
 
@@ -1961,6 +1929,7 @@ SelfDestructBtn.MouseButton1Click:Connect(function()
     Blast.ZIndex = 50
     Blast.Parent = Main
 
+    TestPulseBtn = nil -- cleanup reference
     local BC = Instance.new("UICorner")
     BC.CornerRadius = UDim.new(1, 0)
     BC.Parent = Blast
