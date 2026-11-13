@@ -314,6 +314,7 @@ Main.Position = UDim2.new(0.5, -270, 0.5, -180)
 Main.BackgroundColor3 = Theme.BgPrimary
 Main.BorderSizePixel = 0
 Main.ClipsDescendants = true
+Main.Visible = Config.Open
 Main.Parent = Gui
 
 local MainCorner = Instance.new("UICorner")
@@ -372,7 +373,7 @@ MiniWidget.Size = UDim2.fromOffset(190, 42)
 MiniWidget.Position = UDim2.new(0.5, -95, 0, 20)
 MiniWidget.BackgroundColor3 = Theme.BgSecondary
 MiniWidget.AutoButtonColor = false
-MiniWidget.Visible = false
+MiniWidget.Visible = not Config.Open
 MiniWidget.ZIndex = 50
 MiniWidget.Parent = Gui
 
@@ -729,7 +730,7 @@ StatsRow.BackgroundTransparency = 1
 StatsRow.ZIndex = 5
 StatsRow.Parent = PageDash
 
--- Session Timer Stat Box (Full Width now since earnings is removed)
+-- Session Timer Stat Box
 local StatBox1 = MakeCard(StatsRow, 75)
 StatBox1.Size = UDim2.new(1, 0, 1, 0)
 
@@ -1929,7 +1930,6 @@ SelfDestructBtn.MouseButton1Click:Connect(function()
     Blast.ZIndex = 50
     Blast.Parent = Main
 
-    TestPulseBtn = nil -- cleanup reference
     local BC = Instance.new("UICorner")
     BC.CornerRadius = UDim.new(1, 0)
     BC.Parent = Blast
