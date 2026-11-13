@@ -365,36 +365,67 @@ local function UpdateAllTextLightness()
 end
 
 --====================================================================
---   MINI WIDGET / COMPACT STATS MODE
+--   TWO SEPARATE MINI BARS (TIME BAR & OPEN BUTTON)
 --====================================================================
-local MiniWidget = Instance.new("TextButton")
-MiniWidget.Name = "MiniWidget"
-MiniWidget.Size = UDim2.fromOffset(190, 42)
-MiniWidget.Position = UDim2.new(0, 20, 0, 20)
-MiniWidget.BackgroundColor3 = Theme.BgSecondary
-MiniWidget.AutoButtonColor = false
-MiniWidget.Visible = not Config.Open
-MiniWidget.ZIndex = 50
-MiniWidget.Parent = Gui
 
-local MWCorner = Instance.new("UICorner")
-MWCorner.CornerRadius = UDim.new(1, 0)
-MWCorner.Parent = MiniWidget
+-- 1. Time Bar (Left side) - Shows active time
+local TimeWidget = Instance.new("Frame")
+TimeWidget.Name = "TimeWidget"
+TimeWidget.Size = UDim2.fromOffset(150, 42)
+TimeWidget.Position = UDim2.new(0, 20, 0, 20)
+TimeWidget.BackgroundColor3 = Theme.BgSecondary
+TimeWidget.Visible = not Config.Open
+TimeWidget.ZIndex = 50
+TimeWidget.Parent = Gui
 
-local MWStroke = Instance.new("UIStroke")
-MWStroke.Color = Theme.Accent
-MWStroke.Thickness = 1.6
-MWStroke.Parent = MiniWidget
+local TWCorner = Instance.new("UICorner")
+TWCorner.CornerRadius = UDim.new(1, 0)
+TWCorner.Parent = TimeWidget
 
-local MWLabel = Instance.new("TextLabel")
-MWLabel.Size = UDim2.new(1, 0, 1, 0)
-MWLabel.BackgroundTransparency = 1
-MWLabel.Text = "🐾 00:00:00"
-MWLabel.Font = Enum.Font.GothamBold
-MWLabel.TextSize = 11
-MWLabel.ZIndex = 51
-MWLabel.Parent = MiniWidget
-RegisterText(MWLabel, false)
+local TWStroke = Instance.new("UIStroke")
+TWStroke.Color = Theme.Accent
+TWStroke.Thickness = 1.6
+TWStroke.Parent = TimeWidget
+
+local TWLabel = Instance.new("TextLabel")
+TWLabel.Size = UDim2.new(1, 0, 1, 0)
+TWLabel.BackgroundTransparency = 1
+TWLabel.Text = "🐾 00:00:00"
+TWLabel.Font = Enum.Font.GothamBold
+TWLabel.TextSize = 11
+TWLabel.ZIndex = 51
+TWLabel.Parent = TimeWidget
+RegisterText(TWLabel, false)
+
+-- 2. Open Button Bar (Right side) - Clicks to open main GUI
+local OpenWidget = Instance.new("TextButton")
+OpenWidget.Name = "OpenWidget"
+OpenWidget.Size = UDim2.fromOffset(100, 42)
+OpenWidget.Position = UDim2.new(0, 180, 0, 20)
+OpenWidget.BackgroundColor3 = Theme.BgSecondary
+OpenWidget.AutoButtonColor = false
+OpenWidget.Visible = not Config.Open
+OpenWidget.ZIndex = 50
+OpenWidget.Parent = Gui
+
+local OWCorner = Instance.new("UICorner")
+OWCorner.CornerRadius = UDim.new(1, 0)
+OWCorner.Parent = OpenWidget
+
+local OWStroke = Instance.new("UIStroke")
+OWStroke.Color = Theme.Accent
+OWStroke.Thickness = 1.6
+OWStroke.Parent = OpenWidget
+
+local OWLabel = Instance.new("TextLabel")
+OWLabel.Size = UDim2.new(1, 0, 1, 0)
+OWLabel.BackgroundTransparency = 1
+OWLabel.Text = "📂 Open"
+OWLabel.Font = Enum.Font.GothamBold
+OWLabel.TextSize = 12
+OWLabel.ZIndex = 51
+OWLabel.Parent = OpenWidget
+RegisterText(OWLabel, true)
 
 local function MakeDraggable(obj, handle)
     local dragging, dragStart, startPos
@@ -417,7 +448,8 @@ local function MakeDraggable(obj, handle)
 end
 
 MakeDraggable(Main, Main)
-MakeDraggable(MiniWidget, MiniWidget)
+MakeDraggable(TimeWidget, TimeWidget)
+MakeDraggable(OpenWidget, OpenWidget)
 
 --====================================================================
 --   SIDEBAR NAVIGATION
@@ -1375,11 +1407,13 @@ UserInputService.InputBegan:Connect(function(input, gpe)
     elseif not gpe and input.KeyCode == Config.Keybind then
         Config.Open = not Config.Open
         if Config.Open then
-            MiniWidget.Visible = false
+            TimeWidget.Visible = false
+            OpenWidget.Visible = false
             Main.Visible = true
         else
             Main.Visible = false
-            MiniWidget.Visible = true
+            TimeWidget.Visible = true
+            OpenWidget.Visible = true
         end
         PlaySFX("Click")
     end
@@ -1721,22 +1755,24 @@ local function ToggleWindow(state)
     Config.Open = state
     PlaySFX("Click")
     if Config.Open then
-        MiniWidget.Visible = false
+        TimeWidget.Visible = false
+        OpenWidget.Visible = false
         Main.Visible = true
         UIScaleObj.Scale = Config.UIScale * 0.9
         TweenService:Create(UIScaleObj, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = Config.UIScale}):Play()
     else
         Main.Visible = false
-        MiniWidget.Visible = true
+        TimeWidget.Visible = true
+        OpenWidget.Visible = true
     end
 end
 
 CloseBtn.MouseButton1Click:Connect(function()
     ToggleWindow(false)
-    Notify("Mini Widget Mode", "Click widget or press " .. Config.Keybind.Name .. " to reopen")
+    Notify("Minimized", "Click the 'Open' button or press " .. Config.Keybind.Name .. " to reopen")
 end)
 
-MiniWidget.MouseButton1Click:Connect(function()
+OpenWidget.MouseButton1Click:Connect(function()
     ToggleWindow(true)
 end)
 
@@ -1771,8 +1807,10 @@ ApplyTheme = function(newTheme)
     TopBar.BackgroundColor3 = Theme.Card
     CloseBtn.BackgroundColor3 = Theme.ButtonSolid
     CBS.Color = Theme.Accent
-    MiniWidget.BackgroundColor3 = Theme.BgSecondary
-    MWStroke.Color = Theme.Accent
+    TimeWidget.BackgroundColor3 = Theme.BgSecondary
+    TWStroke.Color = Theme.Accent
+    OpenWidget.BackgroundColor3 = Theme.BgSecondary
+    OWStroke.Color = Theme.Accent
 
     for _, card in ipairs(ThemedCards) do card.BackgroundColor3 = Theme.Card end
     for _, strk in ipairs(ThemedStrokes) do strk.Color = Theme.Secondary end
@@ -1909,7 +1947,7 @@ local RenderConn = RunService.RenderStepped:Connect(function()
         local secs = elapsed % 60
         local timeStr = string.format("%02d:%02d:%02d", hrs, mins, secs)
         TimerValue.Text = timeStr
-        MWLabel.Text = string.format("🐾 %s", timeStr)
+        TWLabel.Text = string.format("🐾 %s", timeStr)
     end
 end)
 
